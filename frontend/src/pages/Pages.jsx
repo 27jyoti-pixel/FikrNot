@@ -1389,7 +1389,7 @@ export function ReportForm({ type = "lost", edit = false }) {
   ];
   const reportLabel = type === "lost" ? "lost" : "found";
   return (
-    <div className="content report-page">
+    <div className={`content report-page${step === 2 ? " report-page-photos" : ""}`}>
       <div className="report-workspace">
         <nav className="report-stepper" aria-label="Report progress">
           <ol>
@@ -1420,7 +1420,8 @@ export function ReportForm({ type = "lost", edit = false }) {
             <span className="report-form-icon">{step === 2 ? <ImageIcon size={32} aria-hidden="true" /> : <ClipboardCheck size={38} aria-hidden="true" />}</span>
             <div>
               <h1>{step === 1 ? "Item details" : step === 2 ? "Add photos" : step === 3 ? "Add a location" : "Review your report"}</h1>
-            <p>{step === 1 ? `Tell us what you ${reportLabel}.` : step === 2 ? "Help others identify your item by adding clear photos." : step === 3 ? "Where should we look for your item?" : "Check the details before submitting."}</p>
+              <p>{step === 1 ? `Tell us what you ${reportLabel}.` : step === 2 ? "Help others identify your item by adding clear photos." : step === 3 ? "Where should we look for your item?" : "Check the details before submitting."}</p>
+              {step === 2 && <p className="report-header-support">Include a few angles to make your item easier to recognise.</p>}
             </div>
           </header>
 
@@ -1464,7 +1465,6 @@ export function ReportForm({ type = "lost", edit = false }) {
 
           {step === 2 && (
             <div className="report-step-panel">
-              <p className="report-step-intro">Include a few angles to make your item easier to recognise.</p>
               <ReportImagePicker
                 inputRef={imageInput}
                 existingImages={existingImages}

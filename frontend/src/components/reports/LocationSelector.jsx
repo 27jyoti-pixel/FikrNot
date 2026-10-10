@@ -64,9 +64,12 @@ export default function LocationSelector({ value, onChange }) {
         placeMarker(point.lat, point.lng);
       });
     }
-    const resizeObserver = new ResizeObserver(() => map.invalidateSize());
+    const invalidateMapSize = () => map.invalidateSize({ pan: false });
+    const initialResizeFrame = requestAnimationFrame(invalidateMapSize);
+    const resizeObserver = new ResizeObserver(invalidateMapSize);
     resizeObserver.observe(mapElement.current);
     return () => {
+      cancelAnimationFrame(initialResizeFrame);
       resizeObserver.disconnect();
       map.remove();
       if (mapElement.current) {
@@ -91,27 +94,31 @@ export default function LocationSelector({ value, onChange }) {
         </button>
       </div>
 
-      {mode === "map" && (
-        <div className="location-map-panel">
-          <div className="location-map" ref={mapElement} aria-label="Interactive campus map; select a point to place the marker" />
-          <label>
-            Selected place or nearby landmark
-            <input required maxLength="200" value={value.area} placeholder="e.g. Central Canteen, Library, near Main Gate" onChange={(event) => { setConfirmed(false); onChange({ ...value, area: event.target.value, confirmed: false }); }} />
-          </label>
-          <div className="location-selection-row">
-            <small>{validPoint ? `Longitude ${Number(value.coordinates[0]).toFixed(6)}, latitude ${Number(value.coordinates[1]).toFixed(6)}` : "Tap or click the map to place a marker."}</small>
-            <button type="button" className="button outline small" disabled={!validPoint || !value.area.trim()} onClick={() => { setConfirmed(true); onChange({ ...value, confirmed: true }); }}>{confirmed ? "Location confirmed" : "Confirm location"}</button>
+      <div className={`location-entry-area location-entry-${mode || "empty"}`}>
+        {mode === "map" && (
+          <div className="location-map-panel">
+            <div className="location-map" ref={mapElement} aria-label="Interactive campus map; select a point to place the marker" />
+            <label>
+              Selected place or nearby landmark
+              <input required maxLength="200" value={value.area} placeholder="e.g. Central Canteen, Library, near Main Gate" onChange={(event) => { setConfirmed(false); onChange({ ...value, area: event.target.value, confirmed: false }); }} />
+            </label>
+            <div className="location-selection-row">
+              <small>{validPoint ? `Longitude ${Number(value.coordinates[0]).toFixed(6)}, latitude ${Number(value.coordinates[1]).toFixed(6)}` : "Tap or click the map to place a marker."}</small>
+              <button type="button" className="button outline small" disabled={!validPoint || !value.area.trim()} onClick={() => { setConfirmed(true); onChange({ ...value, confirmed: true }); }}>{confirmed ? "Location confirmed" : "Confirm location"}</button>
+            </div>
+            {validPoint && !confirmed && <small className="inline-error">Confirm the selected point before submitting.</small>}
           </div>
-          {validPoint && !confirmed && <small className="inline-error">Confirm the selected point before submitting.</small>}
-        </div>
-      )}
+        )}
 
-      {mode === "manual" && (
-        <label className="wide">
-          Location
-          <input required maxLength="200" value={value.area} placeholder="e.g. Parul University, Waghodia, Vadodara" onChange={(event) => onChange({ ...value, area: event.target.value, coordinates: null })} />
-        </label>
-      )}
+        {mode === "manual" && (
+          <label className="wide">
+            Location
+            <input required maxLength="200" value={value.area} placeholder="e.g. Parul University, Waghodia, Vadodara" onChange={(event) => onChange({ ...value, area: event.target.value, coordinates: null })} />
+          </label>
+        )}
+
+        {!mode && <small>Select a method to continue.</small>}
+      </div>
 
       {(value.area || validPoint) && (
         <button type="button" className="location-clear" onClick={() => {
@@ -120,7 +127,6 @@ export default function LocationSelector({ value, onChange }) {
         }}>Clear location selection</button>
       )}
 
-      {!mode && <small>Select a method to continue.</small>}
     </section>
   );
 }

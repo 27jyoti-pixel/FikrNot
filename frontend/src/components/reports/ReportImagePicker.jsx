@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ImagePlus, X } from "lucide-react";
 
 export default function ReportImagePicker({
@@ -9,6 +10,15 @@ export default function ReportImagePicker({
   onRemoveExisting,
   onRemoveNew,
 }) {
+  const [isDragging, setIsDragging] = useState(false);
+
+  function handleDrop(event) {
+    event.preventDefault();
+    setIsDragging(false);
+    const files = event.dataTransfer?.files;
+    if (files?.length) onFilesSelected({ target: { files, value: "" } });
+  }
+
   return (
     <div className="report-image-picker wide">
       <div className="report-image-heading">
@@ -17,9 +27,17 @@ export default function ReportImagePicker({
       </div>
       <small className="report-image-requirements">JPG, PNG or WEBP · Max 5 MB per photo</small>
 
-      <label className="image-upload-prompt">
+      <label
+        className={`image-upload-prompt${isDragging ? " is-dragging" : ""}`}
+        onDragEnter={(event) => { event.preventDefault(); setIsDragging(true); }}
+        onDragOver={(event) => { event.preventDefault(); setIsDragging(true); }}
+        onDragLeave={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) setIsDragging(false);
+        }}
+        onDrop={handleDrop}
+      >
         <span className="report-upload-icon"><ImagePlus size={23} aria-hidden="true" /></span>
-        <span className="report-upload-copy"><b>Choose photos to upload</b><small>Click to browse your files</small></span>
+        <span className="report-upload-copy"><b>Choose photos to upload</b><small>Drag and drop photos here, or click to browse</small></span>
         <input
           ref={inputRef}
           type="file"
