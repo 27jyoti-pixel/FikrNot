@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   Routes,
@@ -95,6 +95,110 @@ function PageHead({ eyebrow, title, description, children }) {
     </div>
   );
 }
+
+function BrowseSelect({ label, value, options, onChange, icon: Icon, className = "" }) {
+  const id = useId();
+  const rootRef = useRef(null);
+  const triggerRef = useRef(null);
+  const optionRefs = useRef([]);
+  const selectedIndex = Math.max(0, options.findIndex((option) => option.value === value));
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(selectedIndex);
+  const [dropUp, setDropUp] = useState(false);
+  const [alignRight, setAlignRight] = useState(false);
+  const [menuMaxHeight, setMenuMaxHeight] = useState(260);
+  const selected = options[selectedIndex] || options[0];
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const closeOutside = (event) => {
+      if (!rootRef.current?.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    return () => document.removeEventListener("pointerdown", closeOutside);
+  }, [open]);
+  useEffect(() => {
+    if (open) optionRefs.current[activeIndex]?.scrollIntoView({ block: "nearest" });
+  }, [activeIndex, open]);
+
+  const openMenu = () => {
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (rect) {
+      const roomBelow = window.innerHeight - rect.bottom - 8;
+      const roomAbove = rect.top - 8;
+      const desiredHeight = Math.min(260, window.innerHeight - 24);
+      const opensUp = roomBelow < desiredHeight && roomAbove > roomBelow;
+      setDropUp(opensUp);
+      setMenuMaxHeight(Math.max(72, Math.min(desiredHeight, (opensUp ? roomAbove : roomBelow) - 4)));
+      const menuWidth = Math.min(320, Math.max(rect.width, 220));
+      setAlignRight(rect.left + menuWidth > window.innerWidth - 12);
+    }
+    setActiveIndex(selectedIndex);
+    setOpen(true);
+  };
+  const choose = (option) => {
+    onChange(option.value);
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
+  const handleKeyDown = (event) => {
+    if (["ArrowDown", "ArrowUp", "Home", "End", "Enter", " "].includes(event.key)) event.preventDefault();
+    if (!open) {
+      if (["ArrowDown", "ArrowUp", "Enter", " "].includes(event.key)) openMenu();
+      return;
+    }
+    if (event.key === "Escape") { setOpen(false); return; }
+    if (event.key === "ArrowDown") setActiveIndex((index) => (index + 1) % options.length);
+    if (event.key === "ArrowUp") setActiveIndex((index) => (index - 1 + options.length) % options.length);
+    if (event.key === "Home") setActiveIndex(0);
+    if (event.key === "End") setActiveIndex(options.length - 1);
+    if (event.key === "Enter" || event.key === " ") choose(options[activeIndex]);
+  };
+
+  return (
+    <div ref={rootRef} className={`browse-select-control ${className} ${open ? "is-open" : ""}`}>
+      {Icon && <Icon size={16} aria-hidden="true" />}
+      <button
+        ref={triggerRef}
+        type="button"
+        role="combobox"
+        aria-label={label}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-controls={`${id}-options`}
+        aria-activedescendant={open ? `${id}-option-${activeIndex}` : undefined}
+        className="browse-select-trigger"
+        onClick={() => (open ? setOpen(false) : openMenu())}
+        onKeyDown={handleKeyDown}
+      >
+        <span>{selected?.label || "Select"}</span>
+        <ChevronDown size={15} aria-hidden="true" />
+      </button>
+      {open && (
+        <div id={`${id}-options`} role="listbox" aria-label={label} className={`browse-select-menu ${dropUp ? "drop-up" : ""} ${alignRight ? "align-right" : ""}`} style={{ maxHeight: menuMaxHeight }}>
+          {options.map((option, index) => (
+            <button
+              ref={(node) => { optionRefs.current[index] = node; }}
+              key={option.value || "all"}
+              id={`${id}-option-${index}`}
+              type="button"
+              role="option"
+              aria-selected={option.value === value}
+              tabIndex={-1}
+              className={`${index === activeIndex ? "is-active" : ""} ${option.value === value ? "is-selected" : ""}`}
+              onMouseEnter={() => setActiveIndex(index)}
+              onClick={() => choose(option)}
+            >
+              <span>{option.label}</span>
+              {option.value === value && <CheckCircle2 size={16} aria-hidden="true" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function useLoad(loader, deps = []) {
   const [state, set] = useState({ loading: true, error: "", data: null });
   const load = useCallback(async () => {
@@ -826,6 +930,26 @@ export function Browse() {
     F((current) => ({ ...current, category }));
     P(1);
   };
+  const typeOptions = [
+    { value: "all", label: "Lost & found" },
+    { value: "lost", label: "Lost items" },
+    { value: "found", label: "Found items" },
+  ];
+  const categoryOptions = [
+    { value: "", label: "All categories" },
+    ...CATEGORIES.map((category) => ({ value: category, label: category })),
+  ];
+  const statusOptions = [
+    { value: "", label: "All statuses" },
+    ...["ACTIVE", "MATCH_FOUND", "CLAIM_IN_PROGRESS", "RECOVERED", "CLOSED", "REPORTED", "AWAITING_HANDOVER", "WITH_RECTOR", "RETURNED"].map((status) => ({
+      value: status,
+      label: status.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()),
+    })),
+  ];
+  const hostelOptions = [
+    { value: "", label: "All hostels" },
+    ...(host.data || []).map((hostel) => ({ value: hostel._id, label: hostel.name })),
+  ];
   return (
     <div className="content browse-page">
       <section className="browse-hero" aria-labelledby="browse-heading">
@@ -849,44 +973,15 @@ export function Browse() {
           />
         </div>
         <div className="browse-filter-controls">
-          <label className="browse-select-control type-filter">
-            <Filter size={16} aria-hidden="true" />
-            <select
-              aria-label="Report type"
-              value={filters.type}
-              onChange={(e) => {
-                F({ ...filters, type: e.target.value });
-                P(1);
-              }}
-            >
-              <option value="all">Lost & found</option>
-              <option value="lost">Lost items</option>
-              <option value="found">Found items</option>
-            </select>
-          </label>
-          <label className="browse-select-control">
-            <select aria-label="Category" value={filters.category} onChange={(e) => setCategory(e.target.value)}>
-              <option value="">All categories</option>
-              {CATEGORIES.map((x) => <option key={x}>{x}</option>)}
-            </select>
-          </label>
-          <label className="browse-select-control">
-            <select aria-label="Status" value={filters.status} onChange={(e) => { F({ ...filters, status: e.target.value }); P(1); }}>
-              <option value="">All statuses</option>
-              {["ACTIVE", "MATCH_FOUND", "CLAIM_IN_PROGRESS", "RECOVERED", "CLOSED", "REPORTED", "AWAITING_HANDOVER", "WITH_RECTOR", "RETURNED"].map((x) => <option key={x} value={x}>{x.replaceAll("_", " ")}</option>)}
-            </select>
-          </label>
-          <div className="browse-date-range">
-            <label><span>From</span><input aria-label="Start date" type="date" value={filters.startDate} onChange={(e) => { F({ ...filters, startDate: e.target.value }); P(1); }} /></label>
-            <span className="browse-date-dash" aria-hidden="true">—</span>
-            <label><span>To</span><input aria-label="End date" type="date" value={filters.endDate} onChange={(e) => { F({ ...filters, endDate: e.target.value }); P(1); }} /></label>
+          <BrowseSelect label="Report type" value={filters.type} options={typeOptions} icon={Filter} className="type-filter" onChange={(type) => { F({ ...filters, type }); P(1); }} />
+          <BrowseSelect label="Category" value={filters.category} options={categoryOptions} onChange={setCategory} />
+          <BrowseSelect label="Status" value={filters.status} options={statusOptions} onChange={(status) => { F({ ...filters, status }); P(1); }} />
+          <div className="browse-date-range" role="group" aria-label="Filter by date range">
+            <label className="browse-date-field"><span>Start</span><input aria-label="Start date" type="date" value={filters.startDate} onChange={(e) => { F({ ...filters, startDate: e.target.value }); P(1); }} /></label>
+            <span className="browse-date-divider" aria-hidden="true" />
+            <label className="browse-date-field"><span>End</span><input aria-label="End date" type="date" value={filters.endDate} onChange={(e) => { F({ ...filters, endDate: e.target.value }); P(1); }} /></label>
           </div>
-          <label className="browse-select-control">
-            <select aria-label="Hostel" value={filters.hostelId} onChange={(e) => { F({ ...filters, hostelId: e.target.value }); P(1); }}>
-              <option value="">All hostels</option>
-              {host.data?.map((x) => <option key={x._id} value={x._id}>{x.name}</option>)}
-            </select>
-          </label>
+          <BrowseSelect label="Hostel" value={filters.hostelId} options={hostelOptions} onChange={(hostelId) => { F({ ...filters, hostelId }); P(1); }} />
         </div>
       </div>
       <nav className="browse-categories" aria-label="Filter by category">
@@ -905,14 +1000,7 @@ export function Browse() {
           <div className="browse-results-toolbar">
             <strong>{result.total} reports</strong>
             <div className="browse-results-actions">
-              <label className="browse-sort-control">
-                <ArrowDownAZ size={17} aria-hidden="true" />
-                <select aria-label="Sort reports" value={sortOrder} onChange={(event) => setSortOrder(event.target.value)}>
-                  <option value="newest">Newest first</option>
-                  <option value="oldest">Oldest first</option>
-                </select>
-                <ChevronDown size={15} aria-hidden="true" />
-              </label>
+              <BrowseSelect label="Sort reports" value={sortOrder} options={[{ value: "newest", label: "Newest first" }, { value: "oldest", label: "Oldest first" }]} icon={ArrowDownAZ} className="browse-sort-control" onChange={setSortOrder} />
               <div className="browse-view-toggle" role="group" aria-label="Results view">
                 <button aria-label="Grid view" aria-pressed={viewMode === "grid"} className={viewMode === "grid" ? "active" : ""} onClick={() => setViewMode("grid")}><LayoutGrid size={18} /></button>
                 <button aria-label="List view" aria-pressed={viewMode === "list"} className={viewMode === "list" ? "active" : ""} onClick={() => setViewMode("list")}><List size={18} /></button>
