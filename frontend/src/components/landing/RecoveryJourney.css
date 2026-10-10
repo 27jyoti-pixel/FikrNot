@@ -1,0 +1,222 @@
+.landing-shell {
+  min-height: 100vh;
+  height: auto;
+  overflow: visible;
+}
+.landing-shell .app-main,
+.landing-shell .home {
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+}
+
+.recovery-journey {
+  width: 100%;
+  overflow: visible;
+  background: var(--background);
+  color: var(--primary-dark);
+  font-family: "DM Sans", "Segoe UI", sans-serif;
+}
+.recovery-journey__inner {
+  width: min(1600px, calc(100% - 64px));
+  position: relative;
+  margin: 0 auto;
+  padding: 28px 0 24px;
+}
+.recovery-journey__heading {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 10px;
+}
+.recovery-journey__eyebrow {
+  margin: 0 0 5px;
+  color: #7e9079;
+  font: 700 13px/1.25 "DM Sans", "Segoe UI", sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.recovery-journey__heading h2 {
+  margin: 0;
+  color: #123c32;
+  font: 700 clamp(32px, 3.5vw, 48px)/1.1 "DM Sans", "Segoe UI", sans-serif;
+  letter-spacing: -0.045em;
+}
+.recovery-journey__heading em {
+  color: #ed7917;
+  font-style: normal;
+}
+.recovery-journey__steps {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: start;
+  gap: 14px;
+  padding-top: 8px;
+}
+.recovery-journey__connector {
+  position: absolute;
+  z-index: 0;
+  top: 39px;
+  left: 7%;
+  width: 86%;
+  height: 50px;
+  overflow: visible;
+  pointer-events: none;
+}
+.recovery-journey__connector path {
+  fill: none;
+  stroke: #94a487;
+  stroke-width: 3;
+  stroke-dasharray: 11 10;
+  stroke-linecap: round;
+}
+.recovery-checkpoint {
+  min-width: 0;
+  min-height: 205px;
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: 112px auto;
+  justify-items: center;
+  align-content: start;
+  text-align: center;
+}
+.recovery-checkpoint__visual {
+  width: 100%;
+  height: 112px;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.recovery-checkpoint__art {
+  width: clamp(58px, 7vw, 92px);
+  height: 88px;
+  position: relative;
+  display: inline-flex;
+  align-items: flex-end;
+  justify-content: center;
+  line-height: 0;
+}
+.recovery-checkpoint__carrot {
+  width: 100%;
+  max-height: 78px;
+  display: block;
+  object-fit: contain;
+  object-position: center bottom;
+}
+.recovery-checkpoint__top-extension {
+  width: 100%;
+  height: auto;
+  position: absolute;
+  left: 0;
+  bottom: calc(100% - 14px);
+  display: block;
+  pointer-events: none;
+}
+.recovery-checkpoint__number {
+  width: 46px;
+  height: 46px;
+  position: absolute;
+  top: 2px;
+  left: calc(50% - 48px);
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid #f07916;
+  border-radius: 50%;
+  color: #ed7917;
+  background: #fffdf8;
+  font: 700 21px/1 "DM Sans", "Segoe UI", sans-serif;
+}
+.recovery-checkpoint__number::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  position: absolute;
+  bottom: -4px;
+  left: 27%;
+  z-index: -1;
+  border-right: 1.5px solid #f07916;
+  border-bottom: 1.5px solid #f07916;
+  background: #fffdf8;
+  transform: rotate(45deg);
+}
+.recovery-checkpoint__copy {
+  width: 100%;
+  min-width: 0;
+  padding: 0 5px;
+}
+.recovery-checkpoint__copy h3 {
+  margin: 0 0 5px;
+  color: #123c32;
+  font: 700 clamp(16px, 1.55vw, 21px)/1.2 "DM Sans", "Segoe UI", sans-serif;
+  letter-spacing: -0.03em;
+}
+.recovery-checkpoint__copy p {
+  max-width: 240px;
+  margin: 0 auto;
+  color: #56676a;
+  font: 400 clamp(13px, 1.25vw, 16px)/1.4 "DM Sans", "Segoe UI", sans-serif;
+}
+
+.home-campus-banner {
+  width: min(1600px, calc(100% - 64px));
+  aspect-ratio: 4.5 / 1;
+  margin: 0 auto 24px;
+  border-radius: 24px;
+  background-color: var(--background);
+  background-image: url("/campus-kindness-banner.png");
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+@media (max-width: 1000px) {
+  .recovery-journey__inner,
+  .home-campus-banner { width: calc(100% - 48px); }
+  .recovery-journey__steps { gap: 8px; }
+  .recovery-checkpoint { min-height: 190px; }
+  .recovery-checkpoint__copy h3 { font-size: 16px; }
+  .recovery-checkpoint__copy p { font-size: 13px; }
+}
+@media (max-width: 760px) {
+  .recovery-journey__inner,
+  .home-campus-banner { width: calc(100% - 36px); }
+  .recovery-journey__inner { padding: 26px 0 22px; }
+  .recovery-journey__heading h2 { font-size: clamp(30px, 5.8vw, 40px); }
+  .recovery-journey__steps { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; }
+  .recovery-journey__connector { display: none; }
+  .recovery-checkpoint { min-height: 170px; grid-template-rows: 92px auto; }
+  .recovery-checkpoint__visual { height: 92px; }
+  .recovery-checkpoint__art { width: 68px; height: 74px; }
+  .recovery-checkpoint__carrot { max-height: 66px; }
+  .recovery-checkpoint__number { width: 38px; height: 38px; left: calc(50% - 40px); font-size: 17px; }
+  .recovery-checkpoint__copy h3 { font-size: 17px; }
+  .recovery-checkpoint__copy p { font-size: 13px; }
+  .home-campus-banner { aspect-ratio: 2.8 / 1; border-radius: 16px; }
+}
+@media (max-width: 520px) {
+  .recovery-journey__inner,
+  .home-campus-banner { width: calc(100% - 28px); }
+  .recovery-journey__inner { padding: 22px 0 20px; }
+  .recovery-journey__eyebrow { font-size: 11px; }
+  .recovery-journey__heading h2 { font-size: clamp(29px, 8vw, 36px); }
+  .recovery-journey__steps { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .recovery-checkpoint {
+    min-height: 112px;
+    grid-template-columns: 74px minmax(0, 1fr);
+    grid-template-rows: 1fr;
+    align-items: center;
+    justify-items: stretch;
+    text-align: left;
+  }
+  .recovery-checkpoint__visual { height: 100px; align-items: flex-end; }
+  .recovery-checkpoint__art { width: 62px; height: 76px; }
+  .recovery-checkpoint__carrot { max-height: 68px; }
+  .recovery-checkpoint__number { width: 34px; height: 34px; top: 2px; left: 0; font-size: 15px; }
+  .recovery-checkpoint__copy { padding: 0 4px; }
+  .recovery-checkpoint__copy h3 { margin-bottom: 3px; font-size: 16px; }
+  .recovery-checkpoint__copy p { margin: 0; font-size: 13px; }
+  .home-campus-banner { aspect-ratio: 2.6 / 1; border-radius: 13px; background-position: center; }
+}

@@ -1,4 +1,4 @@
-const natural = require('natural');
+const JaroWinklerDistance = require('natural/lib/natural/distance/jaro-winkler_distance');
 
 const LostReport = require('../../models/LostReport');
 const FoundReport = require('../../models/FoundReport');
@@ -26,7 +26,7 @@ const getJaroWinklerSimilarity = (str1, str2) => {
 
   if (s1 === s2) return 1.0;
 
-  return natural.JaroWinklerDistance(s1, s2, true);
+  return JaroWinklerDistance(s1, s2, true);
 };
 
 /*

@@ -67,7 +67,7 @@ export default function Navbar() {
         <div className="nav-actions">
           {user ? (
             <>
-              <details className="nav-report-menu">
+              {/* <details className="nav-report-menu">
                 <summary className="button primary nav-report">
                   <Plus size={16} />
                   <span>Report an item</span>
@@ -107,7 +107,7 @@ export default function Navbar() {
                     </span>
                   </Link>
                 </div>
-              </details>
+              </details> */}
               <button
                 className="avatar"
                 aria-label="Open profile"

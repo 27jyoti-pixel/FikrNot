@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Routes,
   Route,
@@ -11,17 +12,29 @@ import {
 import {
   Search,
   ArrowRight,
+  Heart,
   ShieldCheck,
   HeartHandshake,
   MapPin,
   TrendingUp,
   PackageSearch,
   Plus,
-  Check,
   Filter,
   CalendarDays,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  LayoutGrid,
+  List,
+  Laptop,
+  CreditCard,
+  BookOpen,
+  Shirt,
+  Watch,
+  KeyRound,
+  Briefcase,
+  Grid3X3,
+  ArrowDownAZ,
   UserRound,
   LockKeyhole,
   Mail,
@@ -39,11 +52,12 @@ import {
   Users,
   RefreshCw,
   Image as ImageIcon,
-  CheckCircle2 as CompleteIcon,
-  Clock3 as ProgressIcon,
+  Lightbulb,
+  Trash2,
 } from "lucide-react";
 import ItemCard from "../components/items/ItemCard";
 import MiniItem from "../components/items/MiniItem";
+import RecoveryJourney from "../components/landing/RecoveryJourney";
 import ClaimCard from "../components/claims/ClaimCard";
 import Brand from "../components/brand/Brand";
 import ModerationControl from "../components/rector/ModerationControl";
@@ -104,113 +118,22 @@ function useLoad(loader, deps = []) {
 }
 export function Home() {
   const { user } = useAuth();
-  const heroReveal = useScrollReveal();
-  const journeyReveal = useScrollReveal();
-  const closingReveal = useScrollReveal();
   return (
     <div className="home">
-      <section className="hero reveal-on-scroll" ref={heroReveal}>
-        <div className="hero-copy">
-          <div className="eyebrow">
-            <span className="dot-live" /> CAMPUS LOST & FOUND
-          </div>
-          <h1>
-            Lost something?
-            <br />
-            <span>Let’s bring it <em>back.</em></span>
-          </h1>
-          <p className="hero-text">
-            A little less worry. A little more looking out for each other. Find,
-            report and recover belongings across campus.
-          </p>
-          <div className="hero-buttons">
-            <Link
-              className="button primary large"
-              to={user ? "/report/lost" : "/login"}
-            >
-              <Search size={18} />I lost something
-            </Link>
-            <Link
-              className="button outline large"
-              to={user ? "/report/found" : "/login"}
-            >
-              <Plus size={18} />I found something
-            </Link>
-          </div>
-          <div className="hero-proof">
-            <ShieldCheck size={17} />
-            <span>Every claim is reviewed by your hostel Rector</span>
-          </div>
+      <section className="hero-main" aria-label="Campus lost and found">
+        <div className="hero-lost">
+          <h1>Lost something?</h1>
+          <p>Let’s help it find its way back.</p>
+          <Link className="button primary large" to={user ? "/report/lost" : "/login"}>Report a lost item <ArrowRight size={18} /></Link>
         </div>
-        <div className="hero-art">
-          <div className="art-sun" />
-          <div className="art-card card-one">
-            <span className="art-icon">⌁</span>
-            <div>
-              <b>Item reports start here</b>
-              <small>Add a few useful details</small>
-            </div>
-            <span className="art-check">
-              <Check size={15} />
-            </span>
-          </div>
-          <div className="art-card card-two">
-            <span className="art-icon yellow">✳</span>
-            <div>
-              <b>Possible Match</b>
-              <small>A suggestion, never proof</small>
-            </div>
-          </div>
-          <div className="art-plant">✳</div>
-          <div className="art-shape">
-            <PackageSearch size={72} strokeWidth={1.2} />
-          </div>
-          <span className="spark spark-a">✦</span>
-          <span className="spark spark-b">✦</span>
+        <div className="hero-found">
+          <h2>Found something?</h2>
+          <p>Help someone reunite with what matters.</p>
+          <Link className="button secondary large" to={user ? "/report/found" : "/login"}>Report a found item <ArrowRight size={18} /></Link>
         </div>
       </section>
-      <section className="steps-section reveal-on-scroll" ref={journeyReveal}>
-        <div>
-          <div className="eyebrow">A clearer way to recover</div>
-          <h2>
-            From lost to <em>found.</em>
-          </h2>
-        </div>
-        <div className="steps">
-          {[
-            ["01", "Lost", "Report an item with useful details."],
-            ["02", "Discover", "Browse campus reports."],
-            ["03", "Possible Match", "A suggestion based on item details."],
-            ["04", "Rector Verified", "Your Rector reviews the claim."],
-            [
-              "05",
-              "Reunited",
-              "Confirm handover, then Rector completes recovery.",
-            ],
-          ].map(([n, t, d]) => (
-            <div className="step" key={n}>
-              <span>{n}</span>
-              <h3>{t}</h3>
-              <p>{d}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-      <section className="home-bottom reveal-on-scroll" ref={closingReveal}>
-        <div>
-          <div className="eyebrow">A campus that cares</div>
-          <h2>
-            Small acts. <em>Big relief.</em>
-          </h2>
-          <p>Found something? A quick report could make someone’s day.</p>
-        </div>
-        <Link
-          className="button dark large"
-          to={user ? "/report/found" : "/register"}
-        >
-          Help reunite an item <ArrowRight size={17} />
-        </Link>
-      </section>
+      <RecoveryJourney />
+      <section className="home-campus-banner" role="img" aria-label="Same campus, kinder people. Small items make big differences. At FikrNot, we believe every lost item has a story and a way back to its owner." />
     </div>
   );
 }
@@ -266,9 +189,11 @@ export function Login({ rectorEntry = false }) {
   }
   return (
     <AuthPanel
-      eyebrow={rectorEntry ? "CAMPUS STAFF" : "CAMPUS LOST & FOUND"}
-      title={rectorEntry ? "Rector sign in" : "Welcome back"}
-      description={rectorEntry ? "Sign in to manage reports, claims and recovery for your assigned hostel." : "Sign in to pick up where you left off."}
+      eyebrow={rectorEntry ? "CAMPUS STAFF" : "STUDENT"}
+      title={rectorEntry ? "Rector sign in" : "Student sign in"}
+      description={rectorEntry ? "Sign in to manage reports, claims and recovery for your assigned hostel." : "Sign in to report lost items, browse found items and connect with your campus community."}
+      rectorEntry={rectorEntry}
+      studentEntry={!rectorEntry}
     >
       <form onSubmit={submit} className="form-stack">
         {err && (
@@ -278,18 +203,26 @@ export function Login({ rectorEntry = false }) {
         )}
         <label>
           Email address
-          <input
-            required
-            type="email"
-            autoComplete="email"
-            placeholder="you@campus.edu"
-            value={values.email}
-            onChange={(e) => set({ ...values, email: e.target.value })}
-          />
+          <span className="rector-input-wrap">
+            <Mail size={20} aria-hidden="true" />
+            <input
+              required
+              type="email"
+              autoComplete="email"
+              placeholder="you@campus.edu"
+              value={values.email}
+              onChange={(e) => set({ ...values, email: e.target.value })}
+            />
+          </span>
         </label>
         <label>
           Password
           <div className="password-field">
+            <LockKeyhole
+              className="rector-password-icon"
+              size={20}
+              aria-hidden="true"
+            />
             <input
               required
               type={show ? "text" : "password"}
@@ -307,7 +240,10 @@ export function Login({ rectorEntry = false }) {
             </button>
           </div>
         </label>
-        <button disabled={busy} className="button primary auth-submit">
+        <button
+          disabled={busy}
+          className={`button primary auth-submit${rectorEntry ? " rector-submit" : ""}`}
+        >
           {busy ? "Signing in…" : "Sign in"}
           <ArrowRight size={17} />
         </button>
@@ -315,10 +251,9 @@ export function Login({ rectorEntry = false }) {
           {rectorEntry ? (
             <>Not a Rector? <Link to="/login">Student sign in →</Link></>
           ) : (
-            <>New to FikrNot? <Link to="/register">Create an account</Link></>
+            <>Not a student? <Link to="/rector-login">Rector sign in →</Link></>
           )}
         </p>
-        {!rectorEntry && <p className="auth-secondary-link">Are you a Rector? <Link to="/rector-login">Rector sign in →</Link></p>}
       </form>
     </AuthPanel>
   );
@@ -327,8 +262,94 @@ function AuthPanel({
   eyebrow = "CAMPUS LOST & FOUND",
   title,
   description,
+  rectorEntry = false,
+  studentEntry = false,
+  registerEntry = false,
   children,
 }) {
+  if (registerEntry) {
+    return (
+      <div className="registration-page">
+        <section className="registration-card" aria-label="Student registration">
+          <div className="registration-story">
+            <div className="registration-story-copy">
+              <h2>Your campus journey starts here</h2>
+              <p>A few details to help your finds get home.</p>
+            </div>
+            <div className="registration-art-stage">
+              {/* <div className="registration-art-copy">
+                <p className="registration-art-heading">Welcome back, Explorer!</p>
+                <p className="registration-art-description">
+                  Find what's lost. Return what's found. Your campus community is here.
+                </p>
+              </div> */}
+              <img
+                className="registration-art"
+                src="/student-registration-hero.png"
+                alt="A curious rabbit explorer with a backpack among campus books and greenery."
+              />
+            </div>
+          </div>
+          <section
+            className="registration-form-panel"
+            aria-labelledby="registration-title"
+          >
+            {/* <div className="eyebrow registration-eyebrow">{eyebrow}</div> */}
+            <h1 id="registration-title">{title}</h1>
+            <p className="registration-description">{description}</p>
+            {children}
+          </section>
+        </section>
+      </div>
+    );
+  }
+
+  if (rectorEntry) {
+    return (
+      <div className="rector-login-page">
+        <div className="rector-login-layout">
+          <img
+            className="rector-login-art"
+            src="/rector-detective-reference.png"
+            alt="Welcome back, finder. A campus detective rabbit investigates a lost key among paw prints and plants."
+          />
+          <section
+            className="auth-card rector-login-card"
+            aria-labelledby="rector-login-title"
+          >
+            {/* <Brand className="brand auth-brand" />
+            <div className="eyebrow auth-eyebrow">{eyebrow}</div> */}
+            <h1 id="rector-login-title">{title}</h1>
+            <p>{description}</p>
+            {children}
+          </section>
+        </div>
+      </div>
+    );
+  }
+  if (studentEntry) {
+    return (
+      <div className="student-login-page">
+        <div className="student-login-layout">
+          <img
+            className="student-login-art"
+            src="/student-explorer-reference.png"
+            alt="Welcome back, explorer. Find what’s lost. Return what’s found. Your campus community is here. A curious rabbit looks through a magnifying glass over campus lost-and-found books."
+          />
+          <section
+            className="auth-card student-login-card"
+            aria-labelledby="student-login-title"
+          >
+            {/* <Brand className="brand auth-brand" />
+            <div className="eyebrow auth-eyebrow">{eyebrow}</div> */}
+            <h1 id="student-login-title">{title}</h1>
+            <p>{description}</p>
+            {children}
+          </section>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="auth-wrap">
       <div className="auth-card">
@@ -359,7 +380,8 @@ export function Register() {
       roomNumber: "",
     }),
     [err, E] = useState(""),
-    [busy, B] = useState(false);
+    [busy, B] = useState(false),
+    [showPassword, P] = useState(false);
   if (user) return <Navigate to="/dashboard" />;
   async function submit(e) {
     e.preventDefault();
@@ -383,6 +405,7 @@ export function Register() {
       eyebrow="JOIN FikrNot"
       title="Create your student account"
       description="Use your campus details to get started."
+      registerEntry
     >
       <form onSubmit={submit} className="form-stack register-form">
         {err && (
@@ -393,35 +416,53 @@ export function Register() {
         <div className="form-grid">
           <label>
             Full name
-            <input
-              required
-              value={form.name}
-              onChange={(e) => F({ ...form, name: e.target.value })}
-            />
+            <RegistrationControl icon={UserRound}>
+              <input
+                required
+                autoComplete="name"
+                placeholder="Enter your full name"
+                value={form.name}
+                onChange={(e) => F({ ...form, name: e.target.value })}
+              />
+            </RegistrationControl>
           </label>
           <label>
             Student ID
-            <input
-              required
-              value={form.studentId}
-              onChange={(e) => F({ ...form, studentId: e.target.value })}
-            />
+            <RegistrationControl icon={ShieldCheck}>
+              <input
+                required
+                placeholder="Enter your student ID"
+                value={form.studentId}
+                onChange={(e) => F({ ...form, studentId: e.target.value })}
+              />
+            </RegistrationControl>
           </label>
           <label>
             Email address
-            <input
-              type="email"
-              required
-              value={form.email}
-              onChange={(e) => F({ ...form, email: e.target.value })}
-            />
+            <RegistrationControl icon={Mail}>
+              <input
+                type="email"
+                autoComplete="email"
+                placeholder="you@campus.edu"
+                required
+                value={form.email}
+                onChange={(e) => F({ ...form, email: e.target.value })}
+              />
+            </RegistrationControl>
           </label>
           <label>
-            Phone <span className="optional">optional</span>
-            <input
-              value={form.phone}
-              onChange={(e) => F({ ...form, phone: e.target.value })}
-            />
+            <span className="registration-label-text">
+              Phone <span className="optional">(optional)</span>
+            </span>
+            <RegistrationControl icon={Phone}>
+              <input
+                type="tel"
+                autoComplete="tel"
+                placeholder="Enter your phone number"
+                value={form.phone}
+                onChange={(e) => F({ ...form, phone: e.target.value })}
+              />
+            </RegistrationControl>
           </label>
           <label>
             Hostel
@@ -441,60 +482,75 @@ export function Register() {
             ) : !host.data?.length ? (
               <span className="inline-error">No active hostels available</span>
             ) : (
-              <select
-                required
+              <HostelDropdown
+                hostels={host.data}
                 value={form.hostelId}
-                onChange={(e) => F({ ...form, hostelId: e.target.value })}
-              >
-                <option value="">Select your hostel</option>
-                {host.data.map((h) => (
-                  <option key={h._id} value={h._id}>
-                    {h.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(hostelId) => F({ ...form, hostelId })}
+              />
             )}
           </label>
           <label>
             Room number
-            <input
-              value={form.roomNumber}
-              onChange={(e) => F({ ...form, roomNumber: e.target.value })}
-            />
+            <RegistrationControl icon={MapPin}>
+              <input
+                placeholder="Enter your room number"
+                value={form.roomNumber}
+                onChange={(e) => F({ ...form, roomNumber: e.target.value })}
+              />
+            </RegistrationControl>
           </label>
           <label>
             Course
-            <input
-              value={form.course}
-              onChange={(e) => F({ ...form, course: e.target.value })}
-            />
+            <RegistrationControl icon={PackageSearch}>
+              <input
+                placeholder="Enter your course"
+                value={form.course}
+                onChange={(e) => F({ ...form, course: e.target.value })}
+              />
+            </RegistrationControl>
           </label>
           <label>
             Department
-            <input
-              value={form.department}
-              onChange={(e) => F({ ...form, department: e.target.value })}
-            />
+            <RegistrationControl icon={Building2}>
+              <input
+                placeholder="Enter your department"
+                value={form.department}
+                onChange={(e) => F({ ...form, department: e.target.value })}
+              />
+            </RegistrationControl>
           </label>
           <label>
             Year
-            <input
-              type="number"
-              min="1"
-              value={form.year}
-              onChange={(e) => F({ ...form, year: e.target.value })}
-            />
+            <RegistrationControl icon={CalendarDays}>
+              <input
+                type="number"
+                min="1"
+                placeholder="Enter your year"
+                value={form.year}
+                onChange={(e) => F({ ...form, year: e.target.value })}
+              />
+            </RegistrationControl>
           </label>
           <label>
             Password
-            <input
-              type="password"
-              required
-              minLength="6"
-              autoComplete="new-password"
-              value={form.password}
-              onChange={(e) => F({ ...form, password: e.target.value })}
-            />
+            <RegistrationControl icon={LockKeyhole} className="registration-password-control">
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                minLength="6"
+                autoComplete="new-password"
+                placeholder="Enter your password"
+                value={form.password}
+                onChange={(e) => F({ ...form, password: e.target.value })}
+              />
+              <button
+                type="button"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                onClick={() => P(!showPassword)}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </RegistrationControl>
           </label>
         </div>
         <button
@@ -512,6 +568,166 @@ export function Register() {
   );
 }
 
+function RegistrationControl({ icon: Icon, className = "", children }) {
+  return (
+    <span className={`registration-control ${className}`}>
+      <Icon size={20} aria-hidden="true" />
+      {children}
+    </span>
+  );
+}
+
+function HostelDropdown({ hostels, value, onChange }) {
+  const controlRef = useRef(null);
+  const triggerRef = useRef(null);
+  const optionRefs = useRef([]);
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [position, setPosition] = useState(null);
+  const selectedIndex = hostels.findIndex((hostel) => hostel._id === value);
+  const selectedHostel = selectedIndex >= 0 ? hostels[selectedIndex] : null;
+  const listId = "registration-hostel-options";
+
+  const updatePosition = useCallback(() => {
+    const rect = controlRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const viewportPadding = 8;
+    const gap = 6;
+    const desiredHeight = Math.min(hostels.length * 40, 272);
+    const below = Math.max(0, window.innerHeight - rect.bottom - viewportPadding - gap);
+    const above = Math.max(0, rect.top - viewportPadding - gap);
+    const openAbove = below < desiredHeight && above > below;
+    const maxHeight = Math.min(desiredHeight, openAbove ? above : below);
+    const width = Math.min(rect.width, window.innerWidth - viewportPadding * 2);
+    const left = Math.max(viewportPadding, Math.min(rect.left, window.innerWidth - width - viewportPadding));
+    setPosition({
+      left,
+      width,
+      maxHeight,
+      top: openAbove ? Math.max(viewportPadding, rect.top - gap - maxHeight) : rect.bottom + gap,
+    });
+  }, [hostels.length]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    updatePosition();
+    const closeOnOutsidePointer = (event) => {
+      if (!controlRef.current?.contains(event.target) && !event.target.closest?.(".hostel-dropdown-menu")) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open, updatePosition]);
+
+  function choose(hostel) {
+    onChange(hostel._id);
+    setOpen(false);
+    triggerRef.current?.focus();
+  }
+
+  function handleKeyDown(event) {
+    if (!open) {
+      if (["ArrowDown", "ArrowUp", "Enter", " "].includes(event.key)) {
+        event.preventDefault();
+        setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
+        setOpen(true);
+      }
+      return;
+    }
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveIndex((index) => (index + (event.key === "ArrowDown" ? 1 : -1) + hostels.length) % hostels.length);
+    } else if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      setActiveIndex(event.key === "Home" ? 0 : hostels.length - 1);
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      if (hostels[activeIndex]) choose(hostels[activeIndex]);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      setOpen(false);
+    }
+  }
+
+  useEffect(() => {
+    if (open) optionRefs.current[activeIndex]?.scrollIntoView({ block: "nearest" });
+  }, [open, activeIndex]);
+
+  return (
+    <span ref={controlRef} className="registration-control registration-select-control hostel-dropdown-control">
+      <Building2 size={20} aria-hidden="true" />
+      <button
+        ref={triggerRef}
+        type="button"
+        className={`hostel-dropdown-trigger${selectedHostel ? " has-value" : ""}`}
+        role="combobox"
+        aria-label="Hostel"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={listId}
+        aria-activedescendant={open ? `${listId}-${activeIndex}` : undefined}
+        aria-required="true"
+        onClick={() => {
+          setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
+          setOpen((current) => !current);
+        }}
+        onKeyDown={handleKeyDown}
+      >
+        {selectedHostel?.name || <span className="hostel-dropdown-placeholder">Select your hostel</span>}
+      </button>
+      <ChevronDown className="registration-select-chevron" size={18} aria-hidden="true" />
+      <input
+        className="hostel-dropdown-required"
+        tabIndex={-1}
+        required
+        value={value}
+        onChange={() => {}}
+        onInvalid={(event) => {
+          event.preventDefault();
+          triggerRef.current?.focus();
+          setOpen(true);
+        }}
+        aria-hidden="true"
+      />
+      {open && position && createPortal(
+        <div
+          id={listId}
+          className="hostel-dropdown-menu"
+          role="listbox"
+          aria-label="Available hostels"
+          style={{ left: position.left, top: position.top, width: position.width, maxHeight: position.maxHeight }}
+        >
+          {hostels.map((hostel, index) => (
+            <button
+              ref={(node) => { optionRefs.current[index] = node; }}
+              id={`${listId}-${index}`}
+              key={hostel._id}
+              type="button"
+              tabIndex={-1}
+              role="option"
+              aria-selected={hostel._id === value}
+              className={`hostel-dropdown-option${hostel._id === value ? " is-selected" : ""}${index === activeIndex ? " is-active" : ""}`}
+              onMouseEnter={() => setActiveIndex(index)}
+              onClick={() => choose(hostel)}
+            >
+              <span>{hostel.name}</span>
+              {hostel._id === value && <CheckCircle2 size={16} aria-hidden="true" />}
+            </button>
+          ))}
+        </div>,
+        document.body,
+      )}
+    </span>
+  );
+}
+
 export function Browse() {
   const [search, setSearch] = useSearchParams();
   const [filters, F] = useState({
@@ -524,6 +740,8 @@ export function Browse() {
     endDate: "",
   });
   const [page, P] = useState(1);
+  const [sortOrder, setSortOrder] = useState("newest");
+  const [viewMode, setViewMode] = useState("grid");
   const host = useLoad(hostelApi.getHostels, []);
   const [result, R] = useState({
     loading: true,
@@ -587,19 +805,42 @@ export function Browse() {
   useEffect(() => {
     load();
   }, [load]);
+  const visibleRows = useMemo(
+    () => [...result.rows].sort((a, b) => {
+      const difference = new Date(a.createdAt) - new Date(b.createdAt);
+      return sortOrder === "oldest" ? difference : -difference;
+    }),
+    [result.rows, sortOrder],
+  );
+  const categoryIcons = {
+    Electronics: Laptop,
+    "ID/Cards": CreditCard,
+    "Books/Stationery": BookOpen,
+    Clothing: Shirt,
+    Accessories: Watch,
+    Keys: KeyRound,
+    Bags: Briefcase,
+    Other: Grid3X3,
+  };
+  const setCategory = (category) => {
+    F((current) => ({ ...current, category }));
+    P(1);
+  };
   return (
-    <div className="content">
-      <PageHead
-        eyebrow="THE CAMPUS BOARD"
-        title="Browse items"
-        description="Explore lost and found reports from across campus."
-      />
-      <div className="browse-tools">
+    <div className="content browse-page">
+      <section className="browse-hero" aria-labelledby="browse-heading">
+        <div className="browse-hero-copy">
+          <div className="eyebrow">THE CAMPUS BOARD</div>
+          <h1 id="browse-heading">Browse <span>lost</span> &amp; found items</h1>
+          <p>Explore items reported from across campus and help reunite them with their owners.</p>
+        </div>
+      </section>
+      <div className="browse-filters">
         <div className="searchbox">
           <Search size={18} />
           <input
             aria-label="Search item name"
-            placeholder="Search by item name…"
+            placeholder="Search by item name, brand, description..."
             value={filters.search}
             onChange={(e) => {
               F({ ...filters, search: e.target.value });
@@ -607,9 +848,9 @@ export function Browse() {
             }}
           />
         </div>
-        <div className="filter-line">
-          <label>
-            <Filter size={15} />
+        <div className="browse-filter-controls">
+          <label className="browse-select-control type-filter">
+            <Filter size={16} aria-hidden="true" />
             <select
               aria-label="Report type"
               value={filters.type}
@@ -623,90 +864,63 @@ export function Browse() {
               <option value="found">Found items</option>
             </select>
           </label>
-          <select
-            aria-label="Category"
-            value={filters.category}
-            onChange={(e) => {
-              F({ ...filters, category: e.target.value });
-              P(1);
-            }}
-          >
-            <option value="">All categories</option>
-            {CATEGORIES.map((x) => (
-              <option key={x}>{x}</option>
-            ))}
-          </select>
-          <select
-            aria-label="Status"
-            value={filters.status}
-            onChange={(e) => {
-              F({ ...filters, status: e.target.value });
-              P(1);
-            }}
-          >
-            <option value="">All statuses</option>
-            {[
-              "ACTIVE",
-              "MATCH_FOUND",
-              "CLAIM_IN_PROGRESS",
-              "RECOVERED",
-              "CLOSED",
-              "REPORTED",
-              "AWAITING_HANDOVER",
-              "WITH_RECTOR",
-              "RETURNED",
-            ].map((x) => (
-              <option key={x} value={x}>
-                {x.replaceAll("_", " ")}
-              </option>
-            ))}
-          </select>
-          <input
-            aria-label="Start date"
-            type="date"
-            value={filters.startDate}
-            onChange={(e) => {
-              F({ ...filters, startDate: e.target.value });
-              P(1);
-            }}
-          />
-          <input
-            aria-label="End date"
-            type="date"
-            value={filters.endDate}
-            onChange={(e) => {
-              F({ ...filters, endDate: e.target.value });
-              P(1);
-            }}
-          />
-          <select
-            aria-label="Hostel"
-            value={filters.hostelId}
-            onChange={(e) => {
-              F({ ...filters, hostelId: e.target.value });
-              P(1);
-            }}
-          >
-            <option value="">All hostels</option>
-            {host.data?.map((x) => (
-              <option key={x._id} value={x._id}>
-                {x.name}
-              </option>
-            ))}
-          </select>
+          <label className="browse-select-control">
+            <select aria-label="Category" value={filters.category} onChange={(e) => setCategory(e.target.value)}>
+              <option value="">All categories</option>
+              {CATEGORIES.map((x) => <option key={x}>{x}</option>)}
+            </select>
+          </label>
+          <label className="browse-select-control">
+            <select aria-label="Status" value={filters.status} onChange={(e) => { F({ ...filters, status: e.target.value }); P(1); }}>
+              <option value="">All statuses</option>
+              {["ACTIVE", "MATCH_FOUND", "CLAIM_IN_PROGRESS", "RECOVERED", "CLOSED", "REPORTED", "AWAITING_HANDOVER", "WITH_RECTOR", "RETURNED"].map((x) => <option key={x} value={x}>{x.replaceAll("_", " ")}</option>)}
+            </select>
+          </label>
+          <div className="browse-date-range">
+            <label><span>From</span><input aria-label="Start date" type="date" value={filters.startDate} onChange={(e) => { F({ ...filters, startDate: e.target.value }); P(1); }} /></label>
+            <span className="browse-date-dash" aria-hidden="true">—</span>
+            <label><span>To</span><input aria-label="End date" type="date" value={filters.endDate} onChange={(e) => { F({ ...filters, endDate: e.target.value }); P(1); }} /></label>
+          </div>
+          <label className="browse-select-control">
+            <select aria-label="Hostel" value={filters.hostelId} onChange={(e) => { F({ ...filters, hostelId: e.target.value }); P(1); }}>
+              <option value="">All hostels</option>
+              {host.data?.map((x) => <option key={x._id} value={x._id}>{x.name}</option>)}
+            </select>
+          </label>
         </div>
       </div>
+      <nav className="browse-categories" aria-label="Filter by category">
+        <button className={!filters.category ? "active" : ""} aria-pressed={!filters.category} onClick={() => setCategory("")}><LayoutGrid size={18} aria-hidden="true" />All</button>
+        {CATEGORIES.map((category) => {
+          const Icon = categoryIcons[category] || Grid3X3;
+          return <button key={category} className={filters.category === category ? "active" : ""} aria-pressed={filters.category === category} onClick={() => setCategory(category)}><Icon size={18} aria-hidden="true" />{category}</button>;
+        })}
+      </nav>
       {result.loading ? (
         <Loading label="Finding reports…" />
       ) : result.error ? (
         <ErrorState message={result.error} onRetry={load} />
       ) : result.rows.length ? (
         <>
-          <div className="results-label">
-            {result.total} reports <span>Newest first</span>
+          <div className="browse-results-toolbar">
+            <strong>{result.total} reports</strong>
+            <div className="browse-results-actions">
+              <label className="browse-sort-control">
+                <ArrowDownAZ size={17} aria-hidden="true" />
+                <select aria-label="Sort reports" value={sortOrder} onChange={(event) => setSortOrder(event.target.value)}>
+                  <option value="newest">Newest first</option>
+                  <option value="oldest">Oldest first</option>
+                </select>
+                <ChevronDown size={15} aria-hidden="true" />
+              </label>
+              <div className="browse-view-toggle" role="group" aria-label="Results view">
+                <button aria-label="Grid view" aria-pressed={viewMode === "grid"} className={viewMode === "grid" ? "active" : ""} onClick={() => setViewMode("grid")}><LayoutGrid size={18} /></button>
+                <button aria-label="List view" aria-pressed={viewMode === "list"} className={viewMode === "list" ? "active" : ""} onClick={() => setViewMode("list")}><List size={18} /></button>
+              </div>
+            </div>
           </div>
-          <div className="item-grid">
-            {result.rows.map((item) => (
+          <div className={`item-grid browse-item-grid ${viewMode === "list" ? "is-list" : ""}`}>
+            {visibleRows.map((item) => (
               <ItemCard
                 key={`${item._type}-${item._id}`}
                 item={item}
@@ -715,14 +929,16 @@ export function Browse() {
             ))}
           </div>
           {result.pages > 1 && (
-            <div className="pagination">
+            <div className="pagination browse-pagination">
               <button disabled={page <= 1} onClick={() => P(page - 1)}>
                 <ChevronLeft size={17} />
                 Previous
               </button>
-              <span>
-                Page {page} of {result.pages}
-              </span>
+              <div className="browse-page-numbers" aria-label="Report pages">
+                {Array.from({ length: result.pages }, (_, index) => index + 1).map((number) => (
+                  <button key={number} aria-label={`Page ${number}`} aria-current={page === number ? "page" : undefined} className={page === number ? "active" : ""} onClick={() => P(number)}>{number}</button>
+                ))}
+              </div>
               <button
                 disabled={page >= result.pages}
                 onClick={() => P(page + 1)}
@@ -762,6 +978,145 @@ export function Browse() {
   );
 }
 
+function ReportCategoryDropdown({ value, onChange, invalid }) {
+  const controlRef = useRef(null);
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
+  const optionRefs = useRef([]);
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(Math.max(0, CATEGORIES.indexOf(value)));
+  const [position, setPosition] = useState(null);
+  const selectedIndex = CATEGORIES.indexOf(value);
+  const listId = "report-category-options";
+
+  const updatePosition = useCallback(() => {
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const edge = 8;
+    const gap = 5;
+    const wantedHeight = Math.min(CATEGORIES.length * 40 + 8, 264);
+    const roomBelow = Math.max(0, window.innerHeight - rect.bottom - edge - gap);
+    const roomAbove = Math.max(0, rect.top - edge - gap);
+    const openAbove = roomBelow < wantedHeight && roomAbove > roomBelow;
+    const maxHeight = Math.max(40, Math.min(wantedHeight, openAbove ? roomAbove : roomBelow));
+    setPosition({
+      left: Math.max(edge, Math.min(rect.left, window.innerWidth - rect.width - edge)),
+      width: Math.min(rect.width, window.innerWidth - edge * 2),
+      top: openAbove ? Math.max(edge, rect.top - gap - maxHeight) : rect.bottom + gap,
+      maxHeight,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    updatePosition();
+    const closeOnOutsidePointer = (event) => {
+      if (!controlRef.current?.contains(event.target) && !menuRef.current?.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open, updatePosition]);
+
+  useEffect(() => {
+    if (open) optionRefs.current[activeIndex]?.scrollIntoView({ block: "nearest" });
+  }, [open, activeIndex]);
+
+  function choose(category) {
+    onChange(category);
+    setOpen(false);
+    triggerRef.current?.focus();
+  }
+
+  function handleKeyDown(event) {
+    if (!open) {
+      if (["ArrowDown", "ArrowUp", "Enter", " "].includes(event.key)) {
+        event.preventDefault();
+        setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
+        setOpen(true);
+      }
+      return;
+    }
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveIndex((index) => (index + (event.key === "ArrowDown" ? 1 : -1) + CATEGORIES.length) % CATEGORIES.length);
+    } else if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      setActiveIndex(event.key === "Home" ? 0 : CATEGORIES.length - 1);
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      if (CATEGORIES[activeIndex]) choose(CATEGORIES[activeIndex]);
+    } else if (event.key === "Escape" || event.key === "Tab") {
+      setOpen(false);
+    } else if (event.key.length === 1 && /[\p{L}\p{N}]/u.test(event.key)) {
+      const query = event.key.toLocaleLowerCase();
+      const start = selectedIndex >= 0 ? selectedIndex + 1 : 0;
+      const next = [...CATEGORIES.slice(start), ...CATEGORIES.slice(0, start)].findIndex((item) => item.toLocaleLowerCase().startsWith(query));
+      if (next >= 0) setActiveIndex((start + next) % CATEGORIES.length);
+    }
+  }
+
+  return (
+    <span ref={controlRef} className="report-category-control">
+      <button
+        ref={triggerRef}
+        id="report-category-trigger"
+        type="button"
+        className={`report-category-trigger${value ? " has-value" : ""}${invalid ? " is-invalid" : ""}`}
+        role="combobox"
+        aria-label="Category"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={listId}
+        aria-activedescendant={open ? `${listId}-${activeIndex}` : undefined}
+        aria-required="true"
+        aria-invalid={invalid || undefined}
+        onClick={() => {
+          setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
+          setOpen((current) => !current);
+        }}
+        onKeyDown={handleKeyDown}
+      >
+        <span className={value ? "" : "report-category-placeholder"}>{value || "Choose a category"}</span>
+        <ChevronDown size={18} aria-hidden="true" />
+      </button>
+      {open && position && createPortal(
+        <div
+          ref={menuRef}
+          id={listId}
+          className="report-category-menu"
+          role="listbox"
+          aria-label="Category options"
+          style={position}
+        >
+          {CATEGORIES.map((category, index) => (
+            <div
+              ref={(node) => { optionRefs.current[index] = node; }}
+              id={`${listId}-${index}`}
+              key={category}
+              role="option"
+              aria-selected={index === selectedIndex}
+              className={`report-category-option${index === activeIndex ? " is-active" : ""}${index === selectedIndex ? " is-selected" : ""}`}
+              onPointerMove={() => setActiveIndex(index)}
+              onPointerDown={(event) => event.preventDefault()}
+              onClick={() => choose(category)}
+            >
+              {category}
+              {index === selectedIndex && <CheckCircle2 size={16} aria-hidden="true" />}
+            </div>
+          ))}
+        </div>,
+        document.body,
+      )}
+    </span>
+  );
+}
+
 export function ReportForm({ type = "lost", edit = false }) {
   const { id } = useParams();
   const nav = useNavigate();
@@ -780,6 +1135,7 @@ export function ReportForm({ type = "lost", edit = false }) {
   });
   const [existingImages, setExistingImages] = useState([]);
   const [removedImageIds, setRemovedImageIds] = useState([]);
+  const [step, setStep] = useState(1);
   const [err, E] = useState(""),
     [busy, B] = useState(false);
   useEffect(() => () => {
@@ -845,8 +1201,56 @@ export function ReportForm({ type = "lost", edit = false }) {
     setExistingImages((current) => current.filter((candidate) => candidate !== image));
     if (identifier) setRemovedImageIds((current) => current.includes(identifier) ? current : [...current, identifier]);
   }
+  function validateStep(stepNumber) {
+    if (stepNumber === 1) {
+      if (!form.itemName.trim()) return "Enter the item name to continue.";
+      if (!CATEGORIES.includes(form.category)) return "Choose an item category to continue.";
+      if (!form.date) return type === "lost" ? "Choose when you lost the item." : "Choose when you found the item.";
+    }
+    if (stepNumber === 3) {
+      const { area, coordinates, mode, confirmed } = form.location;
+      if (!mode || !area.trim()) return "Choose a location method and enter a place or nearby landmark.";
+      if (mode === "map" && (!confirmed || !Array.isArray(coordinates) || coordinates.length !== 2 || !Number.isFinite(Number(coordinates[0])) || !Number.isFinite(Number(coordinates[1])) || Math.abs(Number(coordinates[0])) > 180 || Math.abs(Number(coordinates[1])) > 90)) {
+        return "Select a valid point on the map and confirm the location.";
+      }
+    }
+    return "";
+  }
+  function moveToStep(targetStep) {
+    if (targetStep > step) {
+      for (let current = step; current < targetStep; current += 1) {
+        const message = validateStep(current);
+        if (message) {
+          E(message);
+          setStep(current);
+          return;
+        }
+      }
+    }
+    E("");
+    setStep(targetStep);
+  }
+  function advanceStep() {
+    if (step < 4) moveToStep(step + 1);
+  }
   async function submit(e) {
     e.preventDefault();
+    if (step < 4) {
+      advanceStep();
+      return;
+    }
+    const detailsError = validateStep(1);
+    if (detailsError) {
+      E(detailsError);
+      setStep(1);
+      return;
+    }
+    const locationError = validateStep(3);
+    if (locationError) {
+      E(locationError);
+      setStep(3);
+      return;
+    }
     const { area, coordinates, mode, confirmed } = form.location;
     if (!mode || !area.trim()) {
       E("Choose a location method and enter a place or nearby landmark.");
@@ -885,102 +1289,176 @@ export function ReportForm({ type = "lost", edit = false }) {
       B(false);
     }
   }
+  const stepDetails = [
+    ["Item details", "Basic information"],
+    ["Photos", "Add images"],
+    ["Location", "Select on map or type"],
+    ["Review", "Check and submit"],
+  ];
+  const reportLabel = type === "lost" ? "lost" : "found";
   return (
-    <div className="content narrow">
-      <PageHead
-        eyebrow={edit ? "UPDATE YOUR REPORT" : "HELP YOUR CAMPUS COMMUNITY"}
-        title={edit ? "Edit report" : `Report ${type} item`}
-        description="Clear details help the right person recognise an item."
-      />
-      <form className="panel report-form" onSubmit={submit}>
-        {err && (
-          <div className="form-alert" role="alert">
-            {err}
+    <div className="content report-page">
+      <div className="report-workspace">
+        <nav className="report-stepper" aria-label="Report progress">
+          <ol>
+            {stepDetails.map(([title, description], index) => {
+              const stepNumber = index + 1;
+              const completed = stepNumber < step;
+              const active = stepNumber === step;
+              return (
+                <li key={title} className={`${active ? "active" : ""} ${completed ? "completed" : ""}`}>
+                  <button
+                    type="button"
+                    className="report-stepper-button"
+                    aria-current={active ? "step" : undefined}
+                    aria-label={`${stepNumber}. ${title}: ${description}${active ? ", current step" : completed ? ", completed" : ", upcoming"}`}
+                    onClick={() => moveToStep(stepNumber)}
+                  >
+                    <span className="report-step-number">{completed ? <CheckCircle2 size={20} aria-hidden="true" /> : stepNumber}</span>
+                    <span className="report-step-label"><b>{title}</b><small>{description}</small></span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
+
+        <form className={`report-form report-main-card report-step-${step}`} onSubmit={submit}>
+          <header className="report-form-header">
+            <span className="report-form-icon"><ClipboardCheck size={38} aria-hidden="true" /></span>
+            <div>
+              <h1>{step === 1 ? "Item details" : step === 2 ? "Add photos" : step === 3 ? "Add a location" : "Review your report"}</h1>
+            <p>{step === 1 ? `Tell us what you ${reportLabel}.` : step === 2 ? "Photos help your campus community recognise it." : step === 3 ? "Where should we look for your item?" : "Check the details before submitting."}</p>
+            </div>
+          </header>
+
+          {err && <div className="form-alert report-form-alert" role="alert">{err}</div>}
+
+          {step === 1 && (
+            <div className="form-grid report-details-grid">
+              <label className="wide">
+                <span className="report-field-label">Item name <span className="required-mark">*</span></span>
+                <input
+                  required
+                  maxLength="100"
+                  value={form.itemName}
+                  placeholder="e.g. Blue stainless steel bottle"
+                  onChange={(e) => F({ ...form, itemName: e.target.value })}
+                  aria-invalid={Boolean(err && !form.itemName.trim())}
+                />
+              </label>
+              <label>
+                <span className="report-field-label">Category <span className="required-mark">*</span></span>
+                <ReportCategoryDropdown
+                  value={form.category}
+                  onChange={(category) => F((current) => ({ ...current, category }))}
+                  invalid={Boolean(err && !form.category)}
+                />
+              </label>
+              <label>
+                <span className="report-field-label">Brand <span className="optional">(optional)</span></span>
+                <input value={form.brand} placeholder="e.g. Nike" onChange={(e) => F({ ...form, brand: e.target.value })} />
+              </label>
+              <label>
+                <span className="report-field-label">Color <span className="optional">(optional)</span></span>
+                <input value={form.color} placeholder="e.g. Black" onChange={(e) => F({ ...form, color: e.target.value })} />
+              </label>
+              <label>
+                <span className="report-field-label">{type === "lost" ? "When did you lose it?" : "When did you find it?"}</span>
+                <input required type="date" value={form.date} onChange={(e) => F({ ...form, date: e.target.value })} aria-invalid={Boolean(err && !form.date)} />
+              </label>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="report-step-panel">
+              <p className="report-step-intro">Add clear photos from a few angles so people can identify the item.</p>
+              <ReportImagePicker
+                inputRef={imageInput}
+                existingImages={existingImages}
+                newImages={form.images}
+                onFilesSelected={selectImages}
+                onRemoveExisting={removeExistingImage}
+                onRemoveNew={removeNewImage}
+              />
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="report-step-panel report-location-step">
+              <label className="report-extra-details">
+                <span className="report-field-label">More details <span className="optional">(optional)</span></span>
+                <textarea
+                  rows="3"
+                  maxLength="1000"
+                  placeholder="Distinctive details that could help identify this item"
+                  value={form.description}
+                  onChange={(e) => F({ ...form, description: e.target.value })}
+                />
+              </label>
+              <LocationSelector value={form.location} onChange={(location) => F((current) => ({ ...current, location }))} />
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="report-step-panel report-review">
+              <p className="report-step-intro">Review your {reportLabel} item details before sending your report.</p>
+              <dl>
+                <div><dt>Item name</dt><dd>{form.itemName || "—"}</dd></div>
+                <div><dt>Category</dt><dd>{form.category || "—"}</dd></div>
+                <div><dt>Brand</dt><dd>{form.brand || "Not provided"}</dd></div>
+                <div><dt>Color</dt><dd>{form.color || "Not provided"}</dd></div>
+                <div><dt>{type === "lost" ? "Lost date" : "Found date"}</dt><dd>{form.date || "—"}</dd></div>
+                <div><dt>Location</dt><dd>{form.location.area || "—"}</dd></div>
+                <div><dt>Photos</dt><dd>{existingImages.length + form.images.length} selected</dd></div>
+                {form.description && <div className="report-review-wide"><dt>More details</dt><dd>{form.description}</dd></div>}
+              </dl>
+            </div>
+          )}
+
+          <div className={`report-form-actions ${step === 1 ? "first-step" : ""}`}>
+            {step > 1 && <button className="button outline report-back-button" type="button" onClick={() => moveToStep(step - 1)}><ChevronLeft size={17} /> Back</button>}
+            {step < 4 ? (
+              <button className="button primary large report-next-button" type="button" onClick={advanceStep}>
+                Next: {stepDetails[step][0]} <ArrowRight size={18} />
+              </button>
+            ) : (
+              <button className="button primary large report-next-button" type="submit" disabled={busy || host.loading}>
+                {busy ? "Submitting…" : edit ? "Save changes" : `Submit ${reportLabel} report`} <ArrowRight size={17} />
+              </button>
+            )}
           </div>
-        )}
-        <div className="form-grid">
-          <label className="wide">
-            Item name
-            <input
-              required
-              maxLength="100"
-              value={form.itemName}
-              placeholder="e.g. Blue stainless steel bottle"
-              onChange={(e) => F({ ...form, itemName: e.target.value })}
-            />
-          </label>
-          <label>
-            Category
-            <select
-              required
-              value={form.category}
-              onChange={(e) => F({ ...form, category: e.target.value })}
-            >
-              <option value="">Choose a category</option>
-              {CATEGORIES.map((x) => (
-                <option key={x}>{x}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Brand <span className="optional">optional</span>
-            <input
-              value={form.brand}
-              onChange={(e) => F({ ...form, brand: e.target.value })}
-            />
-          </label>
-          <label>
-            Color <span className="optional">optional</span>
-            <input
-              value={form.color}
-              onChange={(e) => F({ ...form, color: e.target.value })}
-            />
-          </label>
-          <label>
-            {type === "lost"
-              ? "When did you lose it?"
-              : "When did you find it?"}
-            <input
-              required
-              type="date"
-              value={form.date}
-              onChange={(e) => F({ ...form, date: e.target.value })}
-            />
-          </label>
-          <label className="wide">
-            More details <span className="optional">optional</span>
-            <textarea
-              rows="4"
-              maxLength="1000"
-              placeholder="Distinctive details that could help identify this item"
-              value={form.description}
-              onChange={(e) => F({ ...form, description: e.target.value })}
-            />
-          </label>
-        </div>
-        <ReportImagePicker
-          inputRef={imageInput}
-          existingImages={existingImages}
-          newImages={form.images}
-          onFilesSelected={selectImages}
-          onRemoveExisting={removeExistingImage}
-          onRemoveNew={removeNewImage}
-        />
-        <LocationSelector value={form.location} onChange={(location) => F((current) => ({ ...current, location }))} />
-        <button
-          className="button primary large"
-          disabled={busy || host.loading}
-        >
-          {busy ? "Submitting…" : edit ? "Save changes" : "Submit report"}
-          <ArrowRight size={17} />
-        </button>
-      </form>
+        </form>
+
+        <aside className="report-tips-panel" aria-labelledby="report-tips-title">
+          <h2 id="report-tips-title"><span><Lightbulb size={21} aria-hidden="true" /></span>Tips for better matches</h2>
+          <ul>
+            <li><span><Search size={19} aria-hidden="true" /></span>Be specific</li>
+            <li><span><CheckCircle2 size={19} aria-hidden="true" /></span>Mention unique features</li>
+            <li><span><ImageIcon size={19} aria-hidden="true" /></span>Add clear photos</li>
+            <li><span><MapPin size={19} aria-hidden="true" /></span>Include exact location</li>
+          </ul>
+          <svg className="report-botanical" viewBox="0 0 300 210" aria-hidden="true">
+            <path d="M34 210C72 162 95 116 130 45M104 210c18-62 49-110 77-181M171 210c-1-50 21-98 48-142M232 210c-7-44-2-73 14-112" fill="none" stroke="#647f4b" strokeWidth="3" strokeLinecap="round" />
+            <g fill="#8ea66a" stroke="#738d53" strokeWidth="1.4">
+              <path d="M95 139C56 136 42 116 40 89c31 2 50 18 55 50ZM117 94C83 81 74 59 79 35c27 9 40 27 38 55ZM158 139c33-11 43-35 36-61-27 9-41 27-41 53ZM186 81c32-15 38-40 28-64-26 12-38 32-33 58ZM214 139c28-15 34-38 22-62-23 14-33 33-27 56ZM78 188c-35-3-53-20-58-45 30 1 50 17 58 45ZM256 183c25-20 27-44 12-66-20 17-27 38-19 60Z" />
+            </g>
+            <g fill="#b6c48b">
+              <ellipse cx="53" cy="128" rx="5" ry="2" transform="rotate(28 53 128)" />
+              <ellipse cx="95" cy="70" rx="5" ry="2" transform="rotate(42 95 70)" />
+              <ellipse cx="176" cy="110" rx="5" ry="2" transform="rotate(-25 176 110)" />
+              <ellipse cx="226" cy="109" rx="5" ry="2" transform="rotate(-36 226 109)" />
+            </g>
+          </svg>
+        </aside>
+      </div>
     </div>
   );
 }
 
 export function ItemDetail() {
   const { id } = useParams();
+  const nav = useNavigate();
   const [q] = useSearchParams();
   const type = q.get("type") || "lost";
   const [refresh, setRefresh] = useState(0);
@@ -993,7 +1471,9 @@ export function ItemDetail() {
   const [matches, M] = useState([]),
     [claim, C] = useState(false),
     [evidence, E] = useState(""),
-    [msg, S] = useState("");
+    [msg, S] = useState(""),
+    [deleteBusy, setDeleteBusy] = useState(false),
+    [deleteError, setDeleteError] = useState("");
   useEffect(() => {
     if (!data.data) return;
     (type === "lost"
@@ -1016,6 +1496,25 @@ export function ItemDetail() {
       </div>
     );
   const item = data.data?.report || data.data;
+  const canDeleteLostReport =
+    type === "lost" &&
+    user?.role === "student" &&
+    entityId(item.reportedBy) === user?._id &&
+    ["ACTIVE", "MATCH_FOUND"].includes(item.status);
+  async function deleteLostReport() {
+    if (!window.confirm("Delete this lost-item report? This action cannot be undone.")) return;
+    setDeleteBusy(true);
+    setDeleteError("");
+    try {
+      await lostApi.deleteLost(id);
+      window.alert("Lost-item report deleted successfully.");
+      nav("/dashboard", { replace: true });
+    } catch (error) {
+      setDeleteError(errorMessage(error));
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
   return (
     <div className="content detail-layout">
       <article className="panel detail-main">
@@ -1059,15 +1558,22 @@ export function ItemDetail() {
               <p>{item.description}</p>
             </section>
           )}
-          {user?.role === "student" &&
-            entityId(item.reportedBy) === user?._id && (
+          {user?.role === "student" && entityId(item.reportedBy) === user?._id && (
+            <div className="report-owner-actions">
               <Link
                 className="button outline small edit-item"
                 to={"/report/" + type + "/" + id + "/edit"}
               >
                 Edit report
               </Link>
-            )}
+              {canDeleteLostReport && (
+                <button className="button danger small" type="button" disabled={deleteBusy} onClick={deleteLostReport}>
+                  <Trash2 size={15} aria-hidden="true" /> {deleteBusy ? "Deleting…" : "Delete report"}
+                </button>
+              )}
+              {deleteError && <p className="form-alert report-delete-error" role="alert">{deleteError}</p>}
+            </div>
+          )}
         </div>
       </article>
       <aside className="detail-side">
@@ -1164,6 +1670,8 @@ export function ItemDetail() {
 
 export function StudentDashboard() {
   const { user } = useAuth();
+  const [showAllReports, setShowAllReports] = useState(false);
+  const [showAllMatches, setShowAllMatches] = useState(false);
   const lost = useLoad(() => lostApi.getLost({ page: 1, limit: 100 }), []),
     found = useLoad(() => foundApi.getFound({ page: 1, limit: 100 }), []),
     claims = useLoad(claimApi.getMyClaims, []);
@@ -1197,10 +1705,10 @@ export function StudentDashboard() {
   const latestClaim = [...claimList].sort(
     (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
   )[0];
-  const bestMatch = Array.isArray(matchState.data) ? matchState.data[0] : null;
+  const possibleMatches = Array.isArray(matchState.data) ? matchState.data : [];
   const recentlyFound = campusFound
     .filter((item) => !["RETURNED", "CLOSED"].includes(item.status))
-    .slice(0, 4);
+    .slice(0, 3);
   const activeReports = [
     ...mineLost
       .filter((item) => !["RECOVERED", "CLOSED"].includes(item.status))
@@ -1236,124 +1744,118 @@ export function StudentDashboard() {
       alert(errorMessage(e));
     }
   }
+  const trackerSteps = [
+    {
+      title: "Report submitted",
+      description: "We’ve received your report.",
+      count: lost.loading || found.loading ? "…" : mineLost.length + mineFound.length,
+      active: mineLost.length + mineFound.length > 0,
+      icon: ClipboardCheck,
+      href: "/report/lost",
+    },
+    {
+      title: "Looking for matches",
+      description: "We’ll notify you if we find a match.",
+      count: matchState.loading ? "…" : possibleMatches.length,
+      active: possibleMatches.length > 0,
+      icon: Search,
+      href: "/browse",
+    },
+    {
+      title: "Claim in progress",
+      description: "Track your claims here.",
+      count: claims.loading ? "…" : activeClaimCount,
+      active: activeClaimCount > 0,
+      icon: HeartHandshake,
+      href: "/claims",
+    },
+    {
+      title: "Item recovered",
+      description: "We’ll update you once it’s returned.",
+      count: lost.loading || claims.loading ? "…" : recoveredCount,
+      active: recoveredCount > 0,
+      icon: CheckCircle2,
+      href: "/claims",
+    },
+  ];
+
   return (
-    <div className="content student-dashboard">
-      <PageHead
-        eyebrow="YOUR CAMPUS, YOUR COMMUNITY"
-        title={`Good to see you, ${(user?.name || "there").split(" ")[0]}.`}
-        description="Here’s what’s happening with your items."
-      />
-      <div className="student-status-line">
-        {lost.loading || found.loading || claims.loading
-          ? "Loading your activity…"
-          : `${mineLost.filter((item) => !["RECOVERED", "CLOSED"].includes(item.status)).length} active lost ${mineLost.length === 1 ? "report" : "reports"} · ${activeClaimCount} ${activeClaimCount === 1 ? "claim" : "claims"} in progress · ${bestMatch ? "A possible match is ready to view" : "We’ll surface possible matches here"}`}
+    <div className="content student-dashboard recovery-dashboard">
+      <div className="recovery-overview-panel">
+        <section className="recovery-journey-hero" aria-labelledby="recovery-journey-title">
+          <div className="recovery-hero-copy">
+            {/* <div className="eyebrow">YOUR CAMPUS, YOUR COMMUNITY</div> */}
+            <h1 id="recovery-journey-title">Your recovery journey</h1>
+            <p>We’ll keep you updated at every step.</p>
+            <Link className="button primary recovery-hero-action" to="/report/lost">
+              <Plus size={16} /> Report lost item <ArrowRight size={9} />
+            </Link>
+          </div>
+        </section>
+
+        {/* <section className="recovery-journey-tracker" aria-label="Recovery journey overview">
+          <ol className="recovery-tracker-steps">
+            {trackerSteps.map(({ title, description, count, active, icon: Icon, href }, index) => (
+              <li className={active ? "is-active" : ""} key={title}>
+                <Link to={href} className="recovery-step-link" aria-label={`${title}: ${count}`}>
+                  <span className="recovery-step-icon"><Icon size={16} aria-hidden="true" /></span>
+                  <span className="recovery-step-copy">
+                    <b>{title}</b>
+                    <small>{description}</small>
+                    <em>{count} {index === 0 ? "reports" : index === 1 ? "matches" : index === 2 ? "claims" : "recovered"}</em>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ol>
+        </section> */}
       </div>
-      <div className="quick-actions" aria-label="Quick actions">
-        <Link to="/report/lost" className="quick-action quick-action-primary">
-          <span className="quick-action-icon lost"><Search size={17} /></span>
-          <span>
-            <b>Report lost</b>
-            <small>Share what you’re looking for</small>
-          </span>
-          <ArrowRight size={16} />
-        </Link>
-        <Link to="/report/found" className="quick-action">
-          <span className="quick-action-icon found"><PackageSearch size={17} /></span>
-          <span>
-            <b>Report found</b>
-            <small>Help return an item</small>
-          </span>
-          <ArrowRight size={16} />
-        </Link>
-        <Link to="/browse" className="quick-action">
-          <span className="quick-action-icon browse"><PackageSearch size={17} /></span>
-          <span>
-            <b>Browse found items</b>
-            <small>See what’s been found on campus</small>
-          </span>
-          <ArrowRight size={16} />
-        </Link>
-        <Link to="/notifications" className="quick-action">
-          <span className="quick-action-icon updates"><Inbox size={17} /></span>
-          <span>
-            <b>View updates</b>
-            <small>Stay on top of activity</small>
-          </span>
-          <ArrowRight size={16} />
-        </Link>
-      </div>
-      <div className="student-focus-grid">
-        <section className="student-focus-panel match-focus">
-          <div className="section-title">
+
+      <div className="recovery-dashboard-grid">
+        <section className="recovery-dashboard-card possible-matches-card">
+          <div className="section-title recovery-card-heading">
             <div>
-              <div className="eyebrow">POSSIBLE MATCH</div>
-              <h2>{bestMatch ? "We may have found your item" : "We’re looking for your item"}</h2>
+              <div className="eyebrow">POSSIBLE MATCHES</div>
+              <h2>We’re looking for your item</h2>
             </div>
-            <span className="focus-icon"><Search size={18} /></span>
+            <Link className="text-button" to="/browse">View all <ArrowRight size={14} /></Link>
           </div>
           {matchState.loading || lost.loading ? (
             <Loading />
           ) : matchState.error ? (
             <ErrorState message={matchState.error} onRetry={matchState.reload} />
-          ) : bestMatch ? (
-            <PossibleMatchCard result={bestMatch} />
+          ) : possibleMatches.length ? (
+            <div className="mini-list recovery-match-list">
+              {possibleMatches.slice(0, showAllMatches ? possibleMatches.length : 3).map((result) => (
+                <PossibleMatchCard key={result.match._id} result={result} />
+              ))}
+              {possibleMatches.length > 3 && (
+                <button className="text-button recovery-list-toggle" type="button" onClick={() => setShowAllMatches((show) => !show)}>
+                  {showAllMatches ? "Show fewer" : `View ${possibleMatches.length - 3} more matches`} <ArrowRight size={14} />
+                </button>
+              )}
+            </div>
           ) : (
-            <div className="match-empty">
+            <div className="recovery-empty-state">
+              <span className="recovery-empty-icon"><Search size={23} aria-hidden="true" /></span>
               <b>No possible matches yet</b>
-              <p>We’ll show you here when a found item may belong to you.</p>
-              <Link className="text-button" to="/browse">
-                Browse found items <ArrowRight size={14} />
-              </Link>
+              <p>We’ll notify you when we find a match.</p>
+              <Link className="button primary small" to="/browse">Browse found items <ArrowRight size={14} /></Link>
             </div>
           )}
         </section>
-        <section className="student-focus-panel journey-focus">
-          <div className="section-title">
-            <div>
-              <div className="eyebrow">YOUR RECOVERY JOURNEY</div>
-              <h2>{latestClaim ? claimJourneyTitle(latestClaim) : "One step at a time"}</h2>
-            </div>
-            <Link className="text-button" to="/claims">All claims <ArrowRight size={14} /></Link>
-          </div>
-          {claims.loading ? (
-            <Loading />
-          ) : claims.error ? (
-            <ErrorState message={claims.error} onRetry={claims.reload} />
-          ) : latestClaim ? (
-            <RecoveryTimeline claim={latestClaim} onWithdraw={withdraw} onConfirm={confirm} />
-          ) : mineLost.some((item) => item.status === "MATCH_FOUND") ? (
-            <div className="journey-current">
-              <span className="journey-dot"><CheckCircle2 size={15} /></span>
-              <div><b>Possible match found</b><p>Review the match and submit a claim if it looks like yours.</p></div>
-              {bestMatch && <Link className="text-button" to={`/items/${bestMatch.match.foundReportId._id}?type=found`}>View <ArrowRight size={14} /></Link>}
-            </div>
-          ) : (
-            <div className="journey-current">
-              <span className="journey-dot"><Search size={15} /></span>
-              <div><b>Report submitted</b><p>We’ll keep checking new found reports for a possible match.</p></div>
-            </div>
-          )}
-          {!claims.loading && !claims.error && !claimList.length && (
-            <Link className="journey-browse-link" to="/browse">No claims in progress · Browse items to find a match <ArrowRight size={14} /></Link>
-          )}
-        </section>
-      </div>
-      <div className="student-summary-strip" aria-label="Your personal summary">
-        <span><b>{lost.loading ? "…" : mineLost.length}</b> lost</span>
-        <span><b>{claims.loading ? "…" : activeClaimCount}</b> claims</span>
-        <span><b>{matchState.loading ? "…" : Array.isArray(matchState.data) ? matchState.data.length : 0}</b> matches</span>
-        <span><b>{lost.loading || claims.loading ? "…" : recoveredCount}</b> recovered</span>
-      </div>
-      <div className="student-dashboard-columns">
-        <section className="student-section">
-          <div className="section-title">
+
+        <section className="recovery-dashboard-card active-reports-card">
+          <div className="section-title recovery-card-heading">
             <div>
               <div className="eyebrow">YOUR REPORTS</div>
               <h2>My active reports</h2>
             </div>
-            <Link className="text-button" to="/report/lost">
-              Report item <ArrowRight size={15} />
-            </Link>
+            {activeReports.length > 3 && (
+              <button className="text-button" type="button" onClick={() => setShowAllReports((show) => !show)}>
+                {showAllReports ? "Show less" : "View all"} <ArrowRight size={14} />
+              </button>
+            )}
           </div>
           {lost.loading || found.loading ? (
             <Loading />
@@ -1361,87 +1863,70 @@ export function StudentDashboard() {
             <ErrorState message={lost.error || found.error} onRetry={() => { lost.reload(); found.reload(); }} />
           ) : activeReports.length ? (
             <div className="mini-list">
-              {activeReports.slice(0, 6).map(({ item, type }) => (
+              {activeReports.slice(0, showAllReports ? activeReports.length : 4).map(({ item, type }) => (
                 <DashboardItem key={`${type}-${item._id}`} item={item} type={type} />
               ))}
+              <Link className="text-button recovery-claims-link" to="/claims">View my claims <ArrowRight size={14} /></Link>
             </div>
           ) : (
-            <CompactEmpty
-              title="You’re all caught up"
-              description="Your active lost and found reports will be easy to follow here."
-              to="/report/lost"
-              action="Report an item"
-            />
+            <div className="recovery-empty-state">
+              <span className="recovery-empty-icon"><ClipboardCheck size={23} aria-hidden="true" /></span>
+              <b>You don’t have any active reports yet.</b>
+              <p>Report a lost item to start your journey.</p>
+              <Link className="button primary small" to="/report/lost">Report an item <ArrowRight size={14} /></Link>
+            </div>
           )}
+          {!claims.loading && latestClaim && (
+            <div className="recovery-dashboard-claim">
+              <RecoveryTimeline claim={latestClaim} onWithdraw={withdraw} onConfirm={confirm} />
+            </div>
+          )}
+          {!claims.loading && claims.error && <ErrorState message={claims.error} onRetry={claims.reload} />}
         </section>
-        <aside className="student-side-stack">
-          <div className="section-title">
-            <div>
-              <div className="eyebrow">ON CAMPUS</div>
-              <h2>Recently found</h2>
-            </div>
-            <Link className="text-button" to="/browse">
-              Browse all
-            </Link>
-          </div>
-          {found.loading ? (
-            <Loading />
-          ) : found.error ? (
-            <ErrorState message={found.error} onRetry={found.reload} />
-          ) : recentlyFound.length ? (
-            <div className="mini-list">
-              {recentlyFound.map((item) => (
-                <DashboardItem key={item._id} item={item} type="found" />
-              ))}
-            </div>
-          ) : (
-            <CompactEmpty
-              title="No recent found items"
-              description="New reports from your campus will show up here."
-              to="/browse"
-              action="Browse found items"
-            />
-          )}
-          <section className="student-activity">
-            <div className="eyebrow">RECENT ACTIVITY</div>
-            <h2>Only what matters</h2>
-            {activity.length ? (
-              <ol className="activity-list">
-                {activity.map((event) => (
-                  <li key={event.id}>
-                    <span className={`activity-mark ${event.kind}`}>
-                      {event.kind === "match" ? <Search size={13} /> : event.kind === "recovered" ? <CheckCircle2 size={13} /> : <Clock3 size={13} />}
-                    </span>
-                    <div><b>{event.title}</b><p>{event.detail}</p><small>{fmtDate(event.date)}</small></div>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <div className="activity-empty">Your report and claim updates will appear here.</div>
-            )}
-          </section>
-        </aside>
       </div>
-      <section className="student-contribution">
-        <span className="contribution-icon"><HeartHandshake size={19} /></span>
+
+      <section className="student-contribution recovery-contribution">
+        <span className="contribution-icon"><Heart size={19} aria-hidden="true" /></span>
         <div>
-          <div className="eyebrow">YOUR CONTRIBUTION</div>
-          <b>{mineFound.filter((item) => ["RETURNED", "CLOSED"].includes(item.status)).length} items helped on their way home</b>
-          <p>{mineFound.length ? "Thanks for looking out for your campus community." : "Found something on campus? Help get it back to its owner."}</p>
+          <b>Your contribution matters</b>
+          <p>Found something on campus? Help get it back to its owner.</p>
+          {mineFound.some((item) => ["RETURNED", "CLOSED"].includes(item.status)) && (
+            <small>{mineFound.filter((item) => ["RETURNED", "CLOSED"].includes(item.status)).length} items helped on their way home</small>
+          )}
         </div>
-        {!mineFound.length && <Link className="text-button" to="/report/found">Report a found item <ArrowRight size={14} /></Link>}
+        <Link className="button primary small" to="/report/found">Report a found item <ArrowRight size={14} /></Link>
       </section>
+
+      {/* <div className="recovery-dashboard-secondary">
+        <section className="recovery-dashboard-card">
+          <div className="section-title recovery-card-heading">
+            <div><div className="eyebrow">ON CAMPUS</div><h2>Recently found</h2></div>
+            <Link className="text-button" to="/browse">Browse all <ArrowRight size={14} /></Link>
+          </div>
+          {found.loading ? <Loading /> : found.error ? <ErrorState message={found.error} onRetry={found.reload} /> : recentlyFound.length ? (
+            <div className="mini-list">{recentlyFound.map((item) => <DashboardItem key={item._id} item={item} type="found" />)}</div>
+          ) : <CompactEmpty title="No recent found items" description="New reports from your campus will show up here." to="/browse" action="Browse found items" />}
+        </section>
+        <section className="student-activity recovery-dashboard-card">
+          <div className="eyebrow">RECENT ACTIVITY</div>
+          <h2>Your campus updates</h2>
+          {activity.length ? (
+            <ol className="activity-list">
+              {activity.map((event) => (
+                <li key={event.id}>
+                  <span className={`activity-mark ${event.kind}`}>
+                    {event.kind === "match" ? <Search size={13} /> : event.kind === "recovered" ? <CheckCircle2 size={13} /> : <Clock3 size={13} />}
+                  </span>
+                  <div><b>{event.title}</b><p>{event.detail}</p><small>{fmtDate(event.date)}</small></div>
+                </li>
+              ))}
+            </ol>
+          ) : <div className="activity-empty">Your report and claim updates will appear here.</div>}
+        </section>
+      </div> */}
     </div>
   );
 }
-function claimJourneyTitle(claim) {
-  if (claim.studentConfirmedAt) return "Your item is recovered";
-  if (claim.infoRequestedReason) return "The Rector needs a little more information";
-  if (claim.status === "APPROVED") return "Your item is ready for handover";
-  if (claim.status === "REJECTED") return "This claim was declined";
-  return "Your claim is being reviewed";
-}
-
 function buildStudentActivity(lost, found, claims) {
   const events = [];
   lost.forEach((item) => events.push({

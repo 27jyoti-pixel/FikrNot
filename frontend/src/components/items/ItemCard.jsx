@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   MapPin,
@@ -9,17 +10,19 @@ import Badge from "../common/Badge";
 import { fmtDate, imageUrl } from "../../utils/formatters";
 export default function ItemCard({ item, type }) {
   const img = imageUrl(item);
+  const [imageFailed, setImageFailed] = useState(false);
   return (
     <article className="item-card">
       <Link to={`/items/${item._id}?type=${type}`} className="item-image">
-        {img ? (
+        {img && !imageFailed ? (
           <img
             src={img}
             alt={item.itemName || "Reported item"}
             loading="lazy"
+            onError={() => setImageFailed(true)}
           />
         ) : (
-          <span>
+          <span className="item-image-placeholder" aria-label="No item photo available">
             <ImageIcon size={25} />
           </span>
         )}

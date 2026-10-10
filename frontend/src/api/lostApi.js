@@ -19,6 +19,8 @@ export const createLost = async (data) =>
   dataOf(await http.post("/lost", formData(data)));
 export const updateLost = async (id, data) =>
   dataOf(await http.put(`/lost/${id}`, formData(data)));
+export const deleteLost = async (id) =>
+  dataOf(await http.delete(`/lost/${id}`));
 export const cancelLost = (id) => http.put(`/lost/${id}/cancel`);
 export const moderateLost = (id, body) =>
   http.put(`/lost/${id}/moderate`, body);
