@@ -54,6 +54,10 @@ import {
   Image as ImageIcon,
   Lightbulb,
   Trash2,
+  Bell,
+  MessageCircle,
+  PackageCheck,
+  RotateCw,
 } from "lucide-react";
 import ItemCard from "../components/items/ItemCard";
 import MiniItem from "../components/items/MiniItem";
@@ -1413,14 +1417,14 @@ export function ReportForm({ type = "lost", edit = false }) {
 
         <form className={`report-form report-main-card report-step-${step}`} onSubmit={submit}>
           <header className="report-form-header">
-            <span className="report-form-icon"><ClipboardCheck size={38} aria-hidden="true" /></span>
+            <span className="report-form-icon">{step === 2 ? <ImageIcon size={32} aria-hidden="true" /> : <ClipboardCheck size={38} aria-hidden="true" />}</span>
             <div>
               <h1>{step === 1 ? "Item details" : step === 2 ? "Add photos" : step === 3 ? "Add a location" : "Review your report"}</h1>
-            <p>{step === 1 ? `Tell us what you ${reportLabel}.` : step === 2 ? "Photos help your campus community recognise it." : step === 3 ? "Where should we look for your item?" : "Check the details before submitting."}</p>
+            <p>{step === 1 ? `Tell us what you ${reportLabel}.` : step === 2 ? "Help others identify your item by adding clear photos." : step === 3 ? "Where should we look for your item?" : "Check the details before submitting."}</p>
             </div>
           </header>
 
-          {err && <div className="form-alert report-form-alert" role="alert">{err}</div>}
+          {err && step !== 2 && <div className="form-alert report-form-alert" role="alert">{err}</div>}
 
           {step === 1 && (
             <div className="form-grid report-details-grid">
@@ -1460,11 +1464,12 @@ export function ReportForm({ type = "lost", edit = false }) {
 
           {step === 2 && (
             <div className="report-step-panel">
-              <p className="report-step-intro">Add clear photos from a few angles so people can identify the item.</p>
+              <p className="report-step-intro">Include a few angles to make your item easier to recognise.</p>
               <ReportImagePicker
                 inputRef={imageInput}
                 existingImages={existingImages}
                 newImages={form.images}
+                validationError={err}
                 onFilesSelected={selectImages}
                 onRemoveExisting={removeExistingImage}
                 onRemoveNew={removeNewImage}
@@ -2890,8 +2895,27 @@ function AnalyticsEmpty({ title, description }) {
 }
 
 export function Notifications() {
-  const d = useLoad(() => notifApi.getNotifications(), []);
+  const d = useLoad(() => notifApi.getNotifications({ limit: 1000 }), []);
   const nav = useNavigate();
+  const [filter, setFilter] = useState("all");
+  const [category, setCategory] = useState("all");
+  const notifications = d.data?.notifications || [];
+  const unreadCount = d.data?.unreadCount ?? notifications.filter((n) => !n.isRead).length;
+  const categories = [
+    { id: "matches", label: "Item matches", icon: Search, types: ["MATCH_FOUND"] },
+    { id: "claims", label: "Claim updates", icon: ClipboardCheck, types: ["CLAIM_SUBMITTED", "CLAIM_APPROVED", "CLAIM_REJECTED", "MORE_INFO_REQUIRED"] },
+    { id: "handovers", label: "Handover updates", icon: PackageCheck, types: ["ITEM_RECEIVED", "RECOVERY_CONFIRMED"] },
+    { id: "reports", label: "New reports", icon: Bell, types: ["REPORT_MODERATED"] },
+    { id: "comments", label: "Comments", icon: MessageCircle, types: [] },
+  ];
+  const visibleNotifications = notifications.filter((n) => {
+    const readMatch = filter === "all" || (filter === "unread" ? !n.isRead : n.isRead);
+    const selectedCategory = categories.find((item) => item.id === category);
+    const type = String(n.type || "").toUpperCase();
+    const categoryMatch = category === "all" || (selectedCategory?.types.includes(type) ?? false) || (category === "comments" && /comment/i.test(`${n.type} ${n.title}`));
+    return readMatch && categoryMatch;
+  });
+  const todayCount = notifications.filter((n) => new Date(n.createdAt).toDateString() === new Date().toDateString()).length;
   async function read(n) {
     try {
       await notifApi.markRead(n._id);
@@ -2911,53 +2935,70 @@ export function Notifications() {
       alert(errorMessage(e));
     }
   }
+  const relativeTime = (value) => {
+    const minutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60000));
+    if (!Number.isFinite(minutes)) return fmtDate(value);
+    if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+    return fmtDate(value);
+  };
+  const notificationIcon = (n) => {
+    const type = String(n.type || "").toUpperCase();
+    if (type === "MATCH_FOUND") return Search;
+    if (type.startsWith("CLAIM") || type === "MORE_INFO_REQUIRED") return ClipboardCheck;
+    if (["ITEM_RECEIVED", "RECOVERY_CONFIRMED"].includes(type)) return PackageCheck;
+    if (type === "REPORT_MODERATED") return Bell;
+    if (/comment/i.test(`${n.type} ${n.title}`)) return MessageCircle;
+    return AlertCircle;
+  };
   return (
-    <div className="content">
-      <PageHead
-        eyebrow="UPDATES FROM YOUR CAMPUS"
-        title="Notifications"
-        description="Stay up to date with reports, claims and handovers."
-      >
-        {d.data?.some((n) => !n.isRead) && (
-          <button className="button outline" onClick={all}>
-            Mark all as read
-          </button>
-        )}
-      </PageHead>
+    <div className="content notifications-page">
+      <PageHead eyebrow="YOUR CAMPUS, AT A GLANCE" title="Notifications" description="Stay up to date with reports, claims and handovers." />
       {d.loading ? (
         <Loading />
       ) : d.error ? (
         <ErrorState message={d.error} onRetry={d.reload} />
-      ) : d.data?.length ? (
-        <div className="notification-list">
-          {d.data.map((n) => (
-            <button
-              className={`notification-row ${n.isRead ? "read" : ""}`}
-              key={n._id}
-              onClick={() => read(n)}
-            >
-              <span className="notification-icon">
-                <Inbox size={18} />
-              </span>
-              <span>
-                <b>
-                  {n.title || n.type?.replaceAll("_", " ") || "Campus update"}
-                </b>
-                <small>
-                  {n.message || "There is an update to one of your workflows."}
-                </small>
-                <small>{fmtDate(n.createdAt)}</small>
-              </span>
-              {!n.isRead && <i className="unread-dot" />}
-            </button>
-          ))}
-        </div>
       ) : (
-        <EmptyState title="You’re all caught up" />
+        <>
+          <section className="notification-stats" aria-label="Notification summary">
+            <div className="notification-stat"><span className="notification-stat-icon"><Bell /></span><span><small>All notifications</small><b>{d.data?.pagination?.total ?? notifications.length}</b></span></div>
+            <div className="notification-stat orange"><span className="notification-stat-icon"><Mail /></span><span><small>Unread</small><b>{unreadCount}</b></span></div>
+            <div className="notification-stat"><span className="notification-stat-icon"><Clock3 /></span><span><small>Today</small><b>{todayCount}</b></span></div>
+          </section>
+          <div className="notification-toolbar">
+            <div className="notification-tabs" role="tablist" aria-label="Read status">
+              {[ ["all", "All", d.data?.pagination?.total ?? notifications.length], ["unread", "Unread", unreadCount], ["read", "Read", Math.max(0, (d.data?.pagination?.total ?? notifications.length) - unreadCount)] ].map(([id, label, count]) => <button key={id} className={filter === id ? "active" : ""} onClick={() => setFilter(id)} role="tab" aria-selected={filter === id}>{label} ({count})</button>)}
+            </div>
+            {unreadCount > 0 && <button className="notification-mark-read" onClick={all}><RotateCw size={16} />Mark all as read</button>}
+          </div>
+          <div className="notifications-layout">
+            <section className="notification-list" aria-label="Notifications">
+              {visibleNotifications.length ? visibleNotifications.map((n) => {
+                const Icon = notificationIcon(n);
+                return <button className={`notification-row ${n.isRead ? "read" : "unread"}`} key={n._id} onClick={() => read(n)}>
+                  <span className="notification-icon"><Icon size={23} /></span>
+                  <span className="notification-copy"><b>{n.title || n.type?.replaceAll("_", " ") || "Campus update"}</b><small>{n.message || "There is an update to one of your workflows."}</small></span>
+                  <time>{relativeTime(n.createdAt)}</time>
+                  {!n.isRead && <i className="unread-dot" aria-label="Unread" />}
+                  <ChevronRight className="notification-chevron" size={21} />
+                </button>;
+              }) : <EmptyState title={category === "all" ? "You’re all caught up" : "No notifications in this category"} />}
+            </section>
+            <aside className="notification-types">
+              <div className="notification-types-heading"><span><LeafIcon /></span><div><b>Notification types</b><small>Filter updates by category.</small></div></div>
+              <div className="notification-category-list">
+                {categories.map(({ id, label, icon: Icon, types }) => <button key={id} className={category === id ? "selected" : ""} onClick={() => setCategory(category === id ? "all" : id)}><span className="category-icon"><Icon size={19} /></span><span>{label}</span><b>{id === "comments" ? notifications.filter((n) => /comment/i.test(`${n.type} ${n.title}`)).length : notifications.filter((n) => types.includes(String(n.type || "").toUpperCase())).length}</b><ChevronRight size={17} /></button>)}
+              </div>
+            </aside>
+          </div>
+        </>
       )}
     </div>
   );
 }
+
+function LeafIcon() { return <span className="notification-leaf-mark">✦</span>; }
 
 export function Profile() {
   const d = useLoad(userApi.getProfile, []),

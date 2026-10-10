@@ -116,7 +116,7 @@ export default function Navbar() {
                 {(user.name || "S")[0]}
               </button>
               <button
-                className="text-button signout"
+                className="button primary signout"
                 onClick={async () => {
                   await logout();
                   nav("/");

@@ -4,6 +4,7 @@ export default function ReportImagePicker({
   inputRef,
   existingImages,
   newImages,
+  validationError,
   onFilesSelected,
   onRemoveExisting,
   onRemoveNew,
@@ -11,13 +12,14 @@ export default function ReportImagePicker({
   return (
     <div className="report-image-picker wide">
       <div className="report-image-heading">
-        <strong>Add item photos</strong>
-        <span>Optional · up to 5 images · JPG, PNG or WEBP · 5 MB max each</span>
+        <strong>Item photos</strong>
+        <span>Optional · Up to 5 photos</span>
       </div>
+      <small className="report-image-requirements">JPG, PNG or WEBP · Max 5 MB per photo</small>
 
       <label className="image-upload-prompt">
-        <ImagePlus size={22} />
-        <span><b>Add an item photo</b><small>Choose a JPG, PNG or WEBP image</small></span>
+        <span className="report-upload-icon"><ImagePlus size={23} aria-hidden="true" /></span>
+        <span className="report-upload-copy"><b>Choose photos to upload</b><small>Click to browse your files</small></span>
         <input
           ref={inputRef}
           type="file"
@@ -25,8 +27,18 @@ export default function ReportImagePicker({
           multiple
           onChange={onFilesSelected}
           aria-label="Add report photos"
+          aria-invalid={Boolean(validationError)}
+          aria-describedby={validationError ? "report-image-error" : undefined}
         />
       </label>
+
+      {validationError && <p className="report-image-error" id="report-image-error" role="alert">{validationError}</p>}
+
+      <small className="image-selection-status" role="status" aria-live="polite">
+        {existingImages.length + newImages.length === 0
+          ? "No photos added yet"
+          : `${existingImages.length + newImages.length} photo${existingImages.length + newImages.length === 1 ? "" : "s"} selected`}
+      </small>
 
       {existingImages.length > 0 && (
         <div className="report-image-list" aria-label="Existing report images">
@@ -56,7 +68,6 @@ export default function ReportImagePicker({
           ))}
         </div>
       )}
-      {existingImages.length === 0 && newImages.length === 0 && <small className="image-empty-note">No photos selected.</small>}
     </div>
   );
 }
