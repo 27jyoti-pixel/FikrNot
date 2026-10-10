@@ -10,6 +10,7 @@ const { ROLES } = require('../constants');
 
 router.get('/me', protect, userController.getMyProfile);
 router.put('/me', protect, upload.single('profileImage'), handleImageUpload, userController.updateMyProfile);
+router.get('/me/activity', protect, userController.getMyActivitySummary);
 
 router.get('/', protect, authorize(ROLES.RECTOR), userController.getUsers);
 router.get('/:id', protect, mongoIdParamValidator('id'), validate, userController.getUserById);

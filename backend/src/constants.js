@@ -14,6 +14,8 @@ const CATEGORIES = [
   'Other'
 ];
 
+const STUDENT_SHIFTS = ['Morning Shift', 'Evening Shift'];
+
 const LOST_STATUS = {
   ACTIVE: 'ACTIVE',
   MATCH_FOUND: 'MATCH_FOUND',
@@ -66,6 +68,7 @@ const NOTIFICATION_TYPES = {
 module.exports = {
   ROLES,
   CATEGORIES,
+  STUDENT_SHIFTS,
   LOST_STATUS,
   FOUND_STATUS,
   MATCH_STATUS,

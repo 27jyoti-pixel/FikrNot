@@ -1,7 +1,10 @@
 const asyncWrapper = require('../utils/asyncWrapper');
 const { successResponse, paginatedResponse } = require('../utils/apiResponse');
 const User = require('../models/User');
-const { ROLES } = require('../constants');
+const LostReport = require('../models/LostReport');
+const FoundReport = require('../models/FoundReport');
+const Claim = require('../models/Claim');
+const { ROLES, STUDENT_SHIFTS, LOST_STATUS, FOUND_STATUS, CLAIM_STATUS } = require('../constants');
 const moderationService = require('../services/moderation/moderationService');
 
 const getMyProfile = asyncWrapper(async (req, res) => {
@@ -34,11 +37,32 @@ const updateMyProfile = asyncWrapper(async (req, res) => {
     });
   }
 
+  let parentGuardianValue;
+  if (req.body.parentGuardian !== undefined) {
+    try {
+      parentGuardianValue = typeof req.body.parentGuardian === 'string'
+        ? JSON.parse(req.body.parentGuardian)
+        : req.body.parentGuardian;
+    } catch {
+      return res.status(400).json({ success: false, message: 'Parent or guardian details are invalid.' });
+    }
+    if (!parentGuardianValue || typeof parentGuardianValue !== 'object' || Array.isArray(parentGuardianValue)) {
+      return res.status(400).json({ success: false, message: 'Parent or guardian details are invalid.' });
+    }
+  }
+
   allowedFields.forEach((field) => {
     if (req.body[field] !== undefined) {
-      user[field] = req.body[field];
+      user[field] = field === 'parentGuardian' ? parentGuardianValue : req.body[field];
     }
   });
+
+  if (req.body.shift !== undefined && req.body.shift !== '') {
+    if (user.role !== ROLES.STUDENT || !STUDENT_SHIFTS.includes(req.body.shift)) {
+      return res.status(400).json({ success: false, message: 'Please select a valid student shift.' });
+    }
+    user.shift = req.body.shift;
+  }
 
   if (req.uploadedImages && req.uploadedImages.length > 0) {
     user.profileImage = req.uploadedImages[0].url;
@@ -47,6 +71,28 @@ const updateMyProfile = asyncWrapper(async (req, res) => {
   await user.save();
 
   return successResponse(res, 200, 'Profile updated successfully', { user });
+});
+
+const getMyActivitySummary = asyncWrapper(async (req, res) => {
+  const ownerId = req.user._id;
+  const activeLostStatuses = [LOST_STATUS.RECOVERED, LOST_STATUS.CLOSED];
+  const inactiveFoundStatuses = [FOUND_STATUS.RETURNED, FOUND_STATUS.CLOSED];
+  const pendingClaimStatuses = [CLAIM_STATUS.SUBMITTED, CLAIM_STATUS.UNDER_VERIFICATION, CLAIM_STATUS.APPROVED];
+  const [lostReports, foundReports, recoveredReports, recoveredClaims, pendingClaims, activeLost, activeFound] = await Promise.all([
+    LostReport.countDocuments({ reportedBy: ownerId }),
+    FoundReport.countDocuments({ reportedBy: ownerId }),
+    LostReport.countDocuments({ reportedBy: ownerId, status: LOST_STATUS.RECOVERED }),
+    Claim.countDocuments({ claimantId: ownerId, studentConfirmedAt: { $ne: null } }),
+    Claim.countDocuments({ claimantId: ownerId, status: { $in: pendingClaimStatuses } }),
+    LostReport.countDocuments({ reportedBy: ownerId, status: { $nin: activeLostStatuses }, 'cancellation.isCancelled': { $ne: true } }),
+    FoundReport.countDocuments({ reportedBy: ownerId, status: { $nin: inactiveFoundStatuses }, 'cancellation.isCancelled': { $ne: true } })
+  ]);
+  return successResponse(res, 200, 'Activity summary retrieved', { summary: {
+    reportsSubmitted: lostReports + foundReports,
+    itemsRecovered: recoveredReports + recoveredClaims,
+    pendingClaims,
+    activeReports: activeLost + activeFound
+  } });
 });
 
 const getUsers = asyncWrapper(async (req, res) => {
@@ -142,6 +188,7 @@ const updateUserStatus = asyncWrapper(async (req, res) => {
 
 module.exports = {
   getMyProfile,
+  getMyActivitySummary,
   updateMyProfile,
   getUsers,
   getUserById,

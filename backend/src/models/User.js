@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const { ROLES } = require('../constants');
+const { ROLES, STUDENT_SHIFTS } = require('../constants');
 
 const userSchema = new mongoose.Schema(
   {
@@ -48,6 +48,7 @@ const userSchema = new mongoose.Schema(
     },
     course: { type: String, trim: true },
     department: { type: String, trim: true },
+    shift: { type: String, enum: STUDENT_SHIFTS, trim: true },
     year: { type: Number },
     semester: { type: Number },
     address: { type: String },

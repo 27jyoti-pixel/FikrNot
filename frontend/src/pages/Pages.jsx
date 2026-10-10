@@ -58,6 +58,18 @@ import {
   MessageCircle,
   PackageCheck,
   RotateCw,
+  ArrowLeft,
+  Activity,
+  Pencil,
+  Camera,
+  GraduationCap,
+  DoorOpen,
+  Sun,
+  BarChart3,
+  FileText,
+  Hourglass,
+  Send,
+  Settings,
 } from "lucide-react";
 import ItemCard from "../components/items/ItemCard";
 import MiniItem from "../components/items/MiniItem";
@@ -1589,6 +1601,7 @@ export function ItemDetail() {
       </div>
     );
   const item = data.data?.report || data.data;
+  const isActiveReport = String(item.status || "").toUpperCase() === "ACTIVE";
   const canDeleteLostReport =
     type === "lost" &&
     user?.role === "student" &&
@@ -1609,115 +1622,123 @@ export function ItemDetail() {
     }
   }
   return (
-    <div className="content detail-layout">
-      <article className="panel detail-main">
-        <div className="detail-photo">
-          {item.images?.[0]?.url ? (
-            <img src={item.images[0].url} alt={item.itemName} />
-          ) : (
-            <PackageSearch size={42} />
-          )}
-        </div>
-        <div className="detail-body">
-          <div className="item-topline">
-            <span className={`type-chip ${type}`}>
-              {type === "lost" ? "Lost item" : "Found item"}
-            </span>
-            <Badge value={item.status} />
+    <div className="content item-detail-page">
+      <Link className="item-detail-back" to={user?.role === "rector" ? "/rector-dashboard" : "/dashboard"}>
+        <ArrowLeft size={17} aria-hidden="true" /> Back to My Reports
+      </Link>
+      <div className="detail-layout">
+        <article className="panel detail-main">
+          <div className="detail-photo">
+            {item.images?.[0]?.url ? (
+              <img src={item.images[0].url} alt={item.itemName} />
+            ) : (
+              <PackageSearch size={42} aria-hidden="true" />
+            )}
           </div>
-          <h1>{item.itemName}</h1>
-          <p className="detail-category">
-            {item.category}
-            {item.brand && ` · ${item.brand}`}
-            {item.color && ` · ${item.color}`}
-          </p>
-          <div className="detail-facts">
-            <span>
-              <MapPin size={16} />
-              {item.location?.area || "Campus"}
-            </span>
-            <span>
-              <CalendarDays size={16} />
-              {fmtDate(type === "lost" ? item.lostAt : item.foundAt)}
-            </span>
-            <span>
-              <Building2 size={16} />
-              {item.hostelId?.name || "Hostel community"}
-            </span>
-          </div>
-          {item.description && (
-            <section>
-              <h3>Item details</h3>
-              <p>{item.description}</p>
+          <div className="detail-body">
+            <div className="item-topline">
+              <span className={`type-chip ${type}`}>
+                {type === "lost" ? "Lost item" : "Found item"}
+              </span>
+              <Badge value={item.status} />
+            </div>
+            <h1>{item.itemName}</h1>
+            <p className="detail-category">
+              {item.category}
+              {item.brand && ` · ${item.brand}`}
+              {item.color && ` · ${item.color}`}
+            </p>
+            <div className="detail-facts">
+              <span><MapPin size={17} aria-hidden="true" />{item.location?.area || "Campus"}</span>
+              <span><CalendarDays size={17} aria-hidden="true" />{fmtDate(type === "lost" ? item.lostAt : item.foundAt)}</span>
+              <span><Building2 size={17} aria-hidden="true" />{item.hostelId?.name || "Hostel community"}</span>
+            </div>
+            <section className="detail-description">
+              <h3>Report description</h3>
+              <p>{item.description || "No description provided."}</p>
             </section>
-          )}
-          {user?.role === "student" && entityId(item.reportedBy) === user?._id && (
-            <div className="report-owner-actions">
-              <Link
-                className="button outline small edit-item"
-                to={"/report/" + type + "/" + id + "/edit"}
-              >
-                Edit report
-              </Link>
-              {canDeleteLostReport && (
-                <button className="button danger small" type="button" disabled={deleteBusy} onClick={deleteLostReport}>
-                  <Trash2 size={15} aria-hidden="true" /> {deleteBusy ? "Deleting…" : "Delete report"}
+            {user?.role === "student" && entityId(item.reportedBy) === user?._id && (
+              <div className="report-owner-actions detail-owner-actions">
+                <Link className="button outline small edit-item" to={"/report/" + type + "/" + id + "/edit"}>
+                  <Pencil size={16} aria-hidden="true" /> Edit report
+                </Link>
+                {canDeleteLostReport && (
+                  <button className="button danger small" type="button" disabled={deleteBusy} onClick={deleteLostReport}>
+                    <Trash2 size={16} aria-hidden="true" /> {deleteBusy ? "Deleting…" : "Delete report"}
+                  </button>
+                )}
+                {deleteError && <p className="form-alert report-delete-error" role="alert">{deleteError}</p>}
+              </div>
+            )}
+          </div>
+        </article>
+        <aside className="detail-side">
+          <div className="detail-side-panels">
+          <section className="panel side-panel report-status-panel">
+            <span className="detail-panel-icon status-icon"><Activity size={25} aria-hidden="true" /></span>
+            <div className="status-panel-copy">
+              <h2>Report status</h2>
+              <Badge value={item.status} />
+              <p>{isActiveReport ? "Your report is visible to all students. You will be notified if there are any possible matches." : "This report's current status is shown above. Check back for updates."}</p>
+            </div>
+          </section>
+          <section className="panel side-panel next-step-panel">
+            <span className="detail-panel-icon search-icon"><Search size={27} aria-hidden="true" /></span>
+            <div className="next-panel-copy">
+              <div className="eyebrow">NEXT STEP</div>
+              <h2>
+                {type === "found" ? "Think this could be yours?" : "See a familiar item?"}
+              </h2>
+              <p>{type === "found" ? "Share details only the owner would know. The Rector will verify the claim." : "Possible matches are suggestions only. Ownership is verified by the Rector."}</p>
+              {type === "found" && user?.role === "student" && (
+                <button className="button primary full detail-claim-button" onClick={() => C(!claim)}>
+                  Make a claim <ArrowRight size={16} />
                 </button>
               )}
-              {deleteError && <p className="form-alert report-delete-error" role="alert">{deleteError}</p>}
+              {claim && (
+                <form
+                  className="form-stack claim-form"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    try {
+                      await claimApi.createClaim({ foundReportId: id, evidence });
+                      S("Claim submitted for Rector review.");
+                      C(false);
+                    } catch (x) {
+                      S(errorMessage(x));
+                    }
+                  }}
+                >
+                  <label>
+                    Ownership evidence
+                    <textarea
+                      required
+                      rows="4"
+                      value={evidence}
+                      onChange={(e) => E(e.target.value)}
+                      placeholder="Describe a detail that only the owner would know"
+                    />
+                  </label>
+                  <button className="button primary">Submit claim</button>
+                </form>
+              )}
+              {msg && <p className="success-inline">{msg}</p>}
             </div>
-          )}
-        </div>
-      </article>
-      <aside className="detail-side">
-        <div className="panel side-panel">
-          <div className="eyebrow">NEXT STEP</div>
-          <h3>
-            {type === "found"
-              ? "Think this could be yours?"
-              : "See a familiar item?"}
-          </h3>
-          <p>
-            {type === "found"
-              ? "Share details only the owner would know. The Rector will verify the claim."
-              : "Possible matches are suggestions only. Ownership is verified by the Rector."}
-          </p>
-          {type === "found" && user?.role === "student" && (
-            <button className="button primary full" onClick={() => C(!claim)}>
-              Make a claim <ArrowRight size={16} />
-            </button>
-          )}
-          {claim && (
-            <form
-              className="form-stack claim-form"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                try {
-                  await claimApi.createClaim({ foundReportId: id, evidence });
-                  S("Claim submitted for Rector review.");
-                  C(false);
-                } catch (x) {
-                  S(errorMessage(x));
-                }
-              }}
-            >
-              <label>
-                Ownership evidence
-                <textarea
-                  required
-                  rows="4"
-                  value={evidence}
-                  onChange={(e) => E(e.target.value)}
-                  placeholder="Describe a detail that only the owner would know"
-                />
-              </label>
-              <button className="button primary">Submit claim</button>
-            </form>
-          )}
-          {msg && <p className="success-inline">{msg}</p>}
-        </div>
-        {matches.length > 0 && (
-          <div className="panel side-panel">
+          </section>
+          <section className="panel side-panel detail-tips-panel">
+            <span className="detail-panel-icon tips-icon"><Lightbulb size={22} aria-hidden="true" /></span>
+            <div>
+              <h2>Tips</h2>
+              <ul>
+                <li>Keep an eye on possible matches.</li>
+                <li>Update or delete the report if you find your item.</li>
+                <li>You will receive a notification if someone reports a similar item.</li>
+              </ul>
+            </div>
+          </section>
+          </div>
+          {matches.length > 0 && (
+          <div className="panel side-panel suggested-matches-panel">
             <div className="eyebrow">SUGGESTED</div>
             <h3>Possible matches</h3>
             <p className="small-note">
@@ -1748,15 +1769,12 @@ export function ItemDetail() {
               </Link>
             ))}
           </div>
-        )}
-        {user?.role === "rector" && (
-          <ModerationControl
-            type={type}
-            id={id}
-            onDone={() => setRefresh((n) => n + 1)}
-          />
-        )}
-      </aside>
+          )}
+          {user?.role === "rector" && (
+            <ModerationControl type={type} id={id} onDone={() => setRefresh((n) => n + 1)} />
+          )}
+        </aside>
+      </div>
     </div>
   );
 }
@@ -3001,7 +3019,7 @@ export function Notifications() {
 function LeafIcon() { return <span className="notification-leaf-mark">✦</span>; }
 
 export function Profile() {
-  const d = useLoad(userApi.getProfile, []),
+  const d = useLoad(userApi.getProfile, []), activity = useLoad(userApi.getMyActivitySummary, []),
     [message, M] = useState("");
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -3020,6 +3038,11 @@ export function Profile() {
     if (saveLock.current) return;
     M("");
     const f = new FormData(e.currentTarget);
+    const guardianName = String(f.get("parentGuardianName") || "").trim();
+    const guardianPhone = String(f.get("parentGuardianPhone") || "").trim();
+    f.delete("parentGuardianName");
+    f.delete("parentGuardianPhone");
+    f.set("parentGuardian", JSON.stringify({ name: guardianName, phone: guardianPhone, email: u.parentGuardian?.email || "" }));
     saveLock.current = true;
     setSaving(true);
     try {
@@ -3069,144 +3092,66 @@ export function Profile() {
     .join("")
     .toUpperCase();
   const hostelName = typeof u.hostelId === "object" ? u.hostelId?.name : "";
+  const studentShift = u.shift || "";
+  const stats = activity.data?.summary || activity.data?.data?.summary || {};
+  const beginEdit = () => { M(""); setEditing(true); };
+  const editButton = (label = "Edit") => <button type="button" className="profile-edit-button" onClick={beginEdit}><Pencil size={15} aria-hidden="true" />{label}</button>;
+  const field = (label, name, value, options = {}) => (
+    <label className={`profile-field ${options.wide ? "profile-field-wide" : ""} ${options.className || ""}`}>
+      <span>{label}</span>
+      {options.select ? <select name={name} defaultValue={value || ""} disabled={!editing || saving}>
+        <option value="">Select shift</option><option value="Morning Shift">Morning Shift</option><option value="Evening Shift">Evening Shift</option>
+      </select> : options.textarea ? <textarea name={name} defaultValue={value || ""} readOnly={!editing} rows={2} /> : <input name={name} defaultValue={value || ""} readOnly={!editing} autoComplete={options.autoComplete} />}
+    </label>
+  );
+  const statCard = (Icon, value, label) => <div className="profile-stat"><span className="profile-stat-icon"><Icon size={25} aria-hidden="true" /></span><span className="profile-stat-copy"><b>{activity.loading ? "…" : activity.error ? "—" : Number(value || 0)}</b><small>{label}</small></span></div>;
   return (
     <div className="content profile-page">
-      <PageHead
-        eyebrow="YOUR ACCOUNT"
-        title="Profile"
-        description="Manage your profile and campus information."
-      />
-      <form ref={formRef} onSubmit={save} className="panel profile-card" encType="multipart/form-data">
+      <section className="profile-hero"><div className="profile-hero-copy"><span>YOUR SPACE</span><h1>My Profile</h1><p>Your campus identity, all in one place.</p></div></section>
+      <form ref={formRef} onSubmit={save} className="profile-card" encType="multipart/form-data">
         <section className="profile-identity" aria-label="Profile identity">
-          <div className="profile-avatar" aria-label={`${u.name || "User"} profile image`}>
-            {image ? <img src={image} alt="" /> : <span>{initials}</span>}
+          <div className="profile-avatar" aria-label={`${u.name || "User"} profile image`}>{image ? <img src={image} alt="" /> : <span>{initials}</span>}
+            <label className={`profile-camera-button ${!editing || saving ? "disabled" : ""}`} aria-label="Change profile photo"><Camera size={17} /><input name="profileImage" type="file" accept="image/*" disabled={!editing || saving} onChange={(event) => { const file = event.target.files?.[0]; if (file) setPhotoPreview(URL.createObjectURL(file)); }} /></label>
           </div>
-          <div className="profile-identity-copy">
-            <span className="profile-role">{isStudent ? "Student" : "Rector"}</span>
-            <h2>{u.name}</h2>
-            <p>
-              {isStudent
-                ? [u.course, u.department].filter(Boolean).join(" · ") || "Student account"
-                : u.designation || "Rector account"}
-            </p>
-            {hostelName && (
-              <span className="profile-campus"><MapPin size={14} /> {hostelName}</span>
-            )}
+          <div className="profile-identity-copy"><div className="profile-name-line">{editing ? <input className="profile-name-input" name="name" defaultValue={u.name || ""} aria-label="Name" required /> : <h2>{u.name || "FikrNot user"}</h2>}<span className="profile-role">{isStudent ? "Student" : "Rector"}</span></div>
+            <div className="profile-identity-meta">{isStudent && u.course && <span><GraduationCap size={17} />{u.course}</span>}{hostelName && <span><Building2 size={17} />{hostelName}</span>}{u.roomNumber && <span><DoorOpen size={17} />Room {u.roomNumber}</span>}{isStudent && studentShift && <span><Sun size={17} />{studentShift}</span>}{!hostelName && !u.course && <span>{u.designation || "Campus account"}</span>}</div>
           </div>
-          <label className="profile-photo-button">
-            <ImageIcon size={15} /> Change photo
-            <input
-              name="profileImage"
-              type="file"
-              accept="image/*"
-              disabled={!editing || saving}
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) setPhotoPreview(URL.createObjectURL(file));
-              }}
-            />
-          </label>
+          <div className="profile-identity-actions">{editing ? <span className="profile-editing-label">Editing profile</span> : editButton("Edit profile")}</div>
         </section>
-
-        <div className="profile-field-sections">
-          <section className="profile-field-section">
-            <div className="profile-section-heading">
-              <h3>Personal information</h3>
-              <p>Your name and contact details</p>
-            </div>
-            <div className="profile-fields">
-              <label className="profile-field profile-field-wide">
-                <span>Name</span>
-                <input name="name" defaultValue={u.name || ""} autoComplete="name" readOnly={!editing} />
-              </label>
-              <label className="profile-field">
-                <span>Email</span>
-                <input type="email" value={u.email || ""} disabled readOnly />
-                <small>Your login email</small>
-              </label>
-              <label className="profile-field">
-                <span>Phone</span>
-                <input name="phone" defaultValue={u.phone || ""} autoComplete="tel" readOnly={!editing} />
-              </label>
-            </div>
-          </section>
-
-          {isStudent ? (
-            <>
-              <section className="profile-field-section">
-                <div className="profile-section-heading">
-                  <h3>Academic information</h3>
-                  <p>Your course and department</p>
-                </div>
-                <div className="profile-fields">
-                  <label className="profile-field">
-                    <span>Course</span>
-                    <input name="course" defaultValue={u.course || ""} readOnly={!editing} />
-                  </label>
-                  <label className="profile-field">
-                    <span>Department</span>
-                    <input name="department" defaultValue={u.department || ""} readOnly={!editing} />
-                  </label>
-                </div>
-              </section>
-              <section className="profile-field-section">
-                <div className="profile-section-heading">
-                  <h3>Campus information</h3>
-                  <p>Your assigned residence</p>
-                </div>
-                <div className="profile-fields">
-                  <div className="profile-field">
-                    <span>Hostel</span>
-                    <div className="profile-readonly-field">{hostelName || "Not assigned"}</div>
-                  </div>
-                  <label className="profile-field">
-                    <span>Room number</span>
-                    <input name="roomNumber" defaultValue={u.roomNumber || ""} readOnly={!editing} />
-                  </label>
-                </div>
-              </section>
-            </>
-          ) : (
-            <section className="profile-field-section">
-              <div className="profile-section-heading">
-                <h3>Campus information</h3>
-                <p>Your Rector assignment</p>
-              </div>
-              <div className="profile-fields">
-                <label className="profile-field">
-                  <span>Designation</span>
-                  <input name="designation" defaultValue={u.designation || ""} readOnly={!editing} />
-                </label>
-                <div className="profile-field">
-                  <span>Assigned hostel</span>
-                  <div className="profile-readonly-field">{hostelName || "Not assigned"}</div>
-                </div>
+        <div className="profile-dashboard">
+          <div className="profile-left-column">
+            <section className="profile-section-card"><header className="profile-section-heading"><span className="profile-section-icon"><UserRound size={27} /></span><div><h3>Personal information</h3><p>Your contact and family details.</p></div>{editButton()}</header>
+              <div className="profile-field-grid">
+                <label className="profile-field"><span>Parent / guardian</span><input name="parentGuardianName" defaultValue={u.parentGuardian?.name || ""} readOnly={!editing} placeholder="Not provided" /></label>
+                <label className="profile-field"><span>Phone number</span><input name="phone" defaultValue={u.phone || ""} readOnly={!editing} autoComplete="tel" placeholder="Not provided" /></label>
+                <label className="profile-field"><span>Father's name</span><div className="profile-readonly-field">Not stored in your profile</div></label>
+                <label className="profile-field"><span>Mother's name</span><div className="profile-readonly-field">Not stored in your profile</div></label>
+                <label className="profile-field"><span>Blood group</span><div className="profile-readonly-field">Not stored in your profile</div></label>
+                <label className="profile-field"><span>Guardian phone</span><input name="parentGuardianPhone" defaultValue={u.parentGuardian?.phone || ""} readOnly={!editing} autoComplete="tel" placeholder="Not provided" /></label>
+                <label className="profile-field profile-field-wide"><span>Email</span><input type="email" value={u.email || ""} disabled readOnly /></label>
+                <label className="profile-field profile-field-wide"><span>Address</span><textarea name="address" defaultValue={u.address || ""} readOnly={!editing} rows={2} placeholder="No address provided" /></label>
               </div>
             </section>
-          )}
+            {isStudent && <section className="profile-section-card"><header className="profile-section-heading"><span className="profile-section-icon"><GraduationCap size={27} /></span><div><h3>Academic information</h3><p>Your course and academic details.</p></div>{editButton()}</header>
+              <div className="profile-field-grid">{field("Course", "course", u.course)}{field("Department", "department", u.department)}<div className="profile-field"><span>Roll number</span><div className="profile-readonly-field">{u.studentId || "Not provided"}</div></div>{field("Shift", "shift", studentShift, { select: true })}</div>
+            </section>}
+            <section className="profile-section-card"><header className="profile-section-heading"><span className="profile-section-icon"><Building2 size={26} /></span><div><h3>Hostel information</h3><p>Your assigned hostel and room.</p></div>{editButton()}</header>
+              <div className="profile-field-grid"><div className="profile-field"><span>{isStudent ? "Hostel" : "Assigned hostel"}</span><div className="profile-readonly-field">{hostelName || "Not assigned"}</div></div>{isStudent ? field("Room number", "roomNumber", u.roomNumber) : field("Designation", "designation", u.designation)}</div>
+            </section>
+          </div>
+          <aside className="profile-right-column">
+            <section className="profile-section-card profile-activity-card"><header className="profile-section-heading"><span className="profile-section-icon"><BarChart3 size={26} /></span><div><h3>Your FikrNot activity</h3><p>A quick overview of your contributions.</p></div></header>
+              {activity.error && <p className="profile-activity-error" role="status">Activity totals are temporarily unavailable.</p>}
+              <div className="profile-stats-grid">{statCard(FileText, stats.reportsSubmitted, "Reports submitted")}{statCard(ShieldCheck, stats.itemsRecovered, "Items recovered")}{statCard(Hourglass, stats.pendingClaims, "Pending claims")}{statCard(Send, stats.activeReports, "Active reports")}</div>
+            </section>
+            <section className="profile-section-card profile-account-card"><header className="profile-section-heading"><span className="profile-section-icon"><Settings size={26} /></span><div><h3>Account details</h3><p>Manage your account and security.</p></div></header>
+              <div className="profile-account-row"><span className="profile-mini-icon"><Mail size={18} /></span><span>Login email</span><b title={u.email}>{u.email || "Not available"}</b></div>
+              <div className="profile-account-row"><span className="profile-mini-icon"><LockKeyhole size={18} /></span><span>Password</span><small>Password changes aren’t available from this profile.</small></div>
+            </section>
+            <section className="profile-kindness-card" aria-label="A safer campus, together"><img src="/profile-campus-kindness.png" alt="A safer campus, together. Keep your information updated to help us build a more caring and secure campus." /></section>
+          </aside>
         </div>
-
-        <div className="profile-form-footer">
-          {message && (
-            <p className={message === "Profile saved." ? "success-inline" : "error-inline"} role="status">
-              {message}
-            </p>
-          )}
-          {editing ? (
-            <div style={{ display: "flex", gap: 8 }}>
-              <button className="button secondary" type="button" onClick={cancelEdit} disabled={saving}>
-                Cancel
-              </button>
-              <button className="button primary" type="submit" disabled={saving}>
-                {saving ? <><RefreshCw size={15} className="spin" /> Saving…</> : "Save changes"}
-              </button>
-            </div>
-          ) : (
-            <button className="button primary" type="button" onClick={() => { M(""); setEditing(true); }}>
-              Edit details
-            </button>
-          )}
-        </div>
+        <footer className="profile-form-footer">{message && <p className={message === "Profile saved." ? "success-inline" : "error-inline"} role="status">{message}</p>}{editing ? <div className="profile-form-actions"><button className="button secondary" type="button" onClick={cancelEdit} disabled={saving}>Cancel</button><button className="button primary" type="submit" disabled={saving}>{saving ? <><RefreshCw size={15} className="spin" /> Saving…</> : "Save changes"}</button></div> : null}</footer>
       </form>
     </div>
   );
