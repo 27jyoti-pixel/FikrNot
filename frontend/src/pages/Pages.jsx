@@ -2958,6 +2958,34 @@ function RecoveryTimeline({ claim, onWithdraw, onConfirm }) {
 export function Claims() {
   const data = useLoad(claimApi.getMyClaims, []);
   const [busy, B] = useState(false);
+  const claims = Array.isArray(data.data) ? data.data : [];
+  const latestClaim = [...claims].sort(
+    (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
+  )[0];
+  const recoveryComplete = Boolean(
+    latestClaim?.rectorCompletedAt ||
+      latestClaim?.foundReportId?.status === "RETURNED" ||
+      latestClaim?.lostReportId?.status === "RECOVERED",
+  );
+  const currentClaimStep = !latestClaim
+    ? -1
+    : recoveryComplete
+      ? 6
+      : latestClaim.studentConfirmedAt
+        ? 5
+        : latestClaim.status === "APPROVED"
+          ? 3
+          : ["UNDER_VERIFICATION", "REJECTED"].includes(latestClaim.status)
+            ? 1
+            : 0;
+  const claimSteps = [
+    ["01", "Submitted"],
+    ["02", "Verification"],
+    ["03", "Approved"],
+    ["04", "Handover"],
+    ["05", "Your confirmation"],
+    ["06", "Rector completion"],
+  ];
   async function act(fn, id) {
     B(true);
     try {
@@ -2970,34 +2998,45 @@ export function Claims() {
     }
   }
   return (
-    <div className="content">
-      <PageHead
-        eyebrow="OWNERSHIP & RECOVERY"
-        title="My claims"
-        description="Follow each claim as it moves through Rector verification and handover."
-      />
-      <div className="workflow-strip">
-        {[
-          ["01", "Submitted"],
-          ["02", "Verification"],
-          ["03", "Approved"],
-          ["04", "Handover"],
-          ["05", "Your confirmation"],
-          ["06", "Rector completion"],
-        ].map(([n, t]) => (
-          <span key={n}>
-            <i>{n}</i>
-            {t}
-          </span>
-        ))}
-      </div>
+    <div className="content claims-page">
+      <header className="page-head claims-page-heading">
+        <div>
+          <div className="eyebrow">OWNERSHIP &amp; RECOVERY</div>
+          <h1>My claims</h1>
+          <p>
+            Follow each claim as it moves through Rector verification and
+            handover.
+          </p>
+        </div>
+      </header>
+      <section
+        className="claims-progress-card"
+        aria-label="Claim progress stages"
+      >
+        <ol className="claims-progress-steps">
+          {claimSteps.map(([number, title], index) => {
+            const complete = index < currentClaimStep;
+            const current = index === currentClaimStep;
+            return (
+              <li
+                key={number}
+                className={`${complete ? "is-complete" : ""} ${current ? "is-current" : ""}`.trim()}
+                aria-current={current ? "step" : undefined}
+              >
+                <span className="claims-step-number">{number}</span>
+                <span className="claims-step-label">{title}</span>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
       {data.loading ? (
         <Loading />
       ) : data.error ? (
         <ErrorState message={data.error} onRetry={data.reload} />
-      ) : data.data?.length ? (
+      ) : claims.length ? (
         <div className="claim-list">
-          {data.data.map((c) => (
+          {claims.map((c) => (
             <ClaimCard
               key={c._id}
               claim={c}
@@ -3007,16 +3046,26 @@ export function Claims() {
           ))}
         </div>
       ) : (
-        <EmptyState
-          title="No claims yet"
-          action={
-            <Link className="button primary" to="/browse">
-              Browse found items
+        <section className="claims-empty-card" aria-labelledby="claims-empty-title">
+          <img
+            className="claims-empty-botanical"
+            src="/claims-botanical.svg"
+            alt=""
+            aria-hidden="true"
+          />
+          <figure className="claims-empty-illustration" aria-hidden="true">
+            <img src="/claims-rabbit-reference.png" alt="" />
+          </figure>
+          <div className="claims-empty-copy">
+            <h2 id="claims-empty-title">No claims yet</h2>
+            <p>
+              When you recognise a found item, you can make an ownership claim.
+            </p>
+            <Link className="button primary claims-browse-button" to="/browse">
+              Browse found items <ArrowRight size={16} aria-hidden="true" />
             </Link>
-          }
-        >
-          When you recognise a found item, you can make an ownership claim.
-        </EmptyState>
+          </div>
+        </section>
       )}
     </div>
   );

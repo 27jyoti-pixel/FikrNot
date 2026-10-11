@@ -3,6 +3,7 @@ const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const env = require('./config/env');
+const { createCorsOptions } = require('./config/cors');
 const errorHandler = require('./middlewares/errorMiddleware');
 
 // Import routes
@@ -23,10 +24,8 @@ const app = express();
 app.use(helmet());
 
 // CORS setup
-const corsOptions = {
-  origin: env.CLIENT_URL || 'http://localhost:3000',
-  credentials: true
-};
+const corsOptions = createCorsOptions(env.CLIENT_URL);
+app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
 
 // Body parsing middleware

@@ -138,8 +138,10 @@ JWT_EXPIRES_IN=7d
 CLOUDINARY_CLOUD_NAME=demo_cloud
 CLOUDINARY_API_KEY=1234567890
 CLOUDINARY_API_SECRET=demo_secret
-CLIENT_URL=http://localhost:3000
+CLIENT_URL=https://fikrnot-1.onrender.com
 ```
+
+`CLIENT_URL` may contain comma-separated additional origins. CORS always permits the deployed FikrNot frontend and local Vite development origins (`http://localhost:3000` and `http://localhost:5173`). On Render, set `CLIENT_URL=https://fikrnot-1.onrender.com`.
 
 ---
 
