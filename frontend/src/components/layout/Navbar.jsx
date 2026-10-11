@@ -9,6 +9,7 @@ import {
   Compass,
   LayoutDashboard,
   ChevronDown,
+  ClipboardCheck,
 } from "lucide-react";
 import useAuth from "../../hooks/useAuth";
 import Brand from "../brand/Brand";
@@ -24,6 +25,9 @@ export default function Navbar() {
           user.role === "rector" ? "/rector-dashboard" : "/dashboard",
           LayoutDashboard,
         ],
+        ...(user.role === "rector"
+          ? [["Claims", "/rector-claims", ClipboardCheck]]
+          : []),
         ["Notifications", "/notifications", Bell],
       ]
     : [["Browse", "/browse", Compass]];

@@ -1,8 +1,15 @@
 const DEVELOPMENT_API_ORIGIN = "http://localhost:5000";
 const PRODUCTION_API_ORIGIN = "https://fikrnot-4xsa.onrender.com";
 
-export function resolveApiBaseUrl(configuredUrl, isDevelopment) {
-  const fallback = isDevelopment
+export function resolveApiBaseUrl(configuredUrl, isDevelopment, pageHostname = "") {
+  const hostname = String(pageHostname || "").trim().toLowerCase();
+  const pageIsLoopback =
+    !hostname ||
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "[::1]";
+  const localDevelopment = isDevelopment && pageIsLoopback;
+  const fallback = localDevelopment
     ? DEVELOPMENT_API_ORIGIN
     : PRODUCTION_API_ORIGIN;
   const configured = String(configuredUrl || "").trim();
@@ -10,7 +17,7 @@ export function resolveApiBaseUrl(configuredUrl, isDevelopment) {
     configured,
   );
   const selectedUrl =
-    !isDevelopment && pointsToLoopback ? fallback : configured || fallback;
+    !localDevelopment && pointsToLoopback ? fallback : configured || fallback;
   const origin = selectedUrl.trim().replace(/\/+$/, "");
 
   return /\/api$/i.test(origin) ? origin : `${origin}/api`;

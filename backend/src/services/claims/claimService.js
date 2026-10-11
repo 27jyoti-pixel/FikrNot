@@ -208,6 +208,41 @@ const getStudentClaims = async (student) => {
     .sort({ createdAt: -1 });
 };
 
+const getRectorClaims = async (rector, query = {}) => {
+  if (rector.role !== 'rector' || !rector.hostelId) {
+    const error = new Error('Rector must have an assigned hostel to review claims.');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const page = Math.max(Number.parseInt(query.page, 10) || 1, 1);
+  const parsedLimit = Number.parseInt(query.limit, 10);
+  const limit = Math.min(Math.max(parsedLimit || 20, 1), 100);
+  const skip = (page - 1) * limit;
+  const foundReports = await FoundReport.find({ hostelId: rector.hostelId }).select('_id');
+  const filter = { foundReportId: { $in: foundReports.map((report) => report._id) } };
+  if (Object.values(CLAIM_STATUS).includes(query.status)) filter.status = query.status;
+
+  const [total, claims] = await Promise.all([
+    Claim.countDocuments(filter),
+    Claim.find(filter)
+      .populate({
+        path: 'foundReportId',
+        select: 'itemName category location foundAt status hostelId'
+      })
+      .populate('lostReportId', 'itemName category status')
+      .populate('claimantId', 'name email studentId course department year')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+  ]);
+
+  return {
+    claims,
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 }
+  };
+};
+
 /*
 |--------------------------------------------------------------------------
 | Get Claim By ID
@@ -702,6 +737,7 @@ const requestMoreInfo = async (
 module.exports = {
   submitClaim,
   getStudentClaims,
+  getRectorClaims,
   getClaimById,
   updateClaimEvidence,
   withdrawClaim,

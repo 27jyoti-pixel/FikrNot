@@ -1,8 +1,6 @@
 const { errorResponse } = require('../utils/apiResponse');
 
 const errorHandler = (err, req, res, next) => {
-  console.error('[Error Handler]', err);
-
   let statusCode = err.statusCode || 500;
   let message = err.statusCode
     ? err.message
@@ -72,6 +70,24 @@ const errorHandler = (err, req, res, next) => {
     statusCode = 401;
     message = 'Invalid or expired authentication token.';
   }
+
+  // Error messages and stacks can contain user input or connection strings.
+  // Keep logs useful with safe codes and request context only.
+  console.error(JSON.stringify({
+    event: 'api_request_error',
+    method: req.method,
+    path: req.path,
+    statusCode,
+    errorName: err.name || 'Error',
+    diagnosticCode: err.diagnosticCode || undefined,
+    errorCode: typeof err.code === 'string' || typeof err.code === 'number'
+      ? err.code
+      : undefined,
+    causeName: err.cause?.name || undefined,
+    causeCode: typeof err.cause?.code === 'string' || typeof err.cause?.code === 'number'
+      ? err.cause.code
+      : undefined
+  }));
 
   return errorResponse(
     res,

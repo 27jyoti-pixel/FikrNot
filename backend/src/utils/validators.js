@@ -42,7 +42,7 @@ const claimValidator = [
 ];
 
 const claimReviewValidator = [
-  body('status').isIn([CLAIM_STATUS.APPROVED, CLAIM_STATUS.REJECTED]).withMessage('Status must be APPROVED or REJECTED'),
+  body('status').isIn([CLAIM_STATUS.UNDER_VERIFICATION, CLAIM_STATUS.APPROVED, CLAIM_STATUS.REJECTED]).withMessage('Status must be UNDER_VERIFICATION, APPROVED or REJECTED'),
   body('rejectionReason')
     .if(body('status').equals(CLAIM_STATUS.REJECTED))
     .notEmpty()

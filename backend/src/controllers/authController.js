@@ -13,6 +13,16 @@ const login = asyncWrapper(async (req, res) => {
   return successResponse(res, 200, 'Login successful', result);
 });
 
+const demoRectorLogin = asyncWrapper(async (req, res) => {
+  const result = await authService.loginDemoRector();
+  return successResponse(res, 200, 'Demo Rector login successful', result);
+});
+
+const demoRectorCredentials = asyncWrapper(async (req, res) => {
+  const credentials = await authService.getDemoRectorCredentials();
+  return successResponse(res, 200, 'Demo Rector credentials fetched successfully', credentials);
+});
+
 const getMe = asyncWrapper(async (req, res) => {
   return successResponse(res, 200, 'User profile fetched successfully', { user: req.user });
 });
@@ -24,6 +34,8 @@ const logout = asyncWrapper(async (req, res) => {
 module.exports = {
   register,
   login,
+  demoRectorLogin,
+  demoRectorCredentials,
   getMe,
   logout
 };

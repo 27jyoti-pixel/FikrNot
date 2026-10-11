@@ -76,7 +76,16 @@ import {
   Hourglass,
   Send,
   Settings,
+  Copy,
+  Check,
 } from "lucide-react";
+
+// These are the intentionally public credentials for the isolated demo account.
+// Readiness still comes from the backend, which verifies the account and its hash.
+const PUBLIC_DEMO_RECTOR_CREDENTIALS = Object.freeze({
+  email: "rector@gmail.com",
+  password: "rector123",
+});
 import ItemCard from "../components/items/ItemCard";
 import MiniItem from "../components/items/MiniItem";
 import RecoveryJourney from "../components/landing/RecoveryJourney";
@@ -345,12 +354,40 @@ function useScrollReveal() {
 }
 
 export function Login({ rectorEntry = false }) {
-  const { login, user } = useAuth();
+  const { login, loginDemoRector, user } = useAuth();
   const nav = useNavigate();
   const [values, set] = useState({ email: "", password: "" }),
     [busy, B] = useState(false),
     [err, E] = useState(""),
-    [show, S] = useState(false);
+    [show, S] = useState(false),
+    [demoCredentialsStatus, setDemoCredentialsStatus] = useState(
+      rectorEntry ? "loading" : "idle",
+    ),
+    [copiedCredential, setCopiedCredential] = useState("");
+  useEffect(() => {
+    if (!rectorEntry) return undefined;
+    let mounted = true;
+    authApi
+      .getDemoRectorCredentials()
+      .then((credentials) => {
+        if (!mounted) return;
+        if (
+          credentials?.email === PUBLIC_DEMO_RECTOR_CREDENTIALS.email &&
+          credentials?.password === PUBLIC_DEMO_RECTOR_CREDENTIALS.password
+        ) {
+          setDemoCredentialsStatus("ready");
+        } else {
+          setDemoCredentialsStatus("unavailable");
+        }
+      })
+      .catch((error) => {
+        if (!mounted) return;
+        setDemoCredentialsStatus(
+          error.response?.status === 503 ? "unavailable" : "error",
+        );
+      });
+    return () => { mounted = false; };
+  }, [rectorEntry]);
   if (user) return <Navigate to={homePathForUser(user)} replace />;
   async function submit(e) {
     e.preventDefault();
@@ -363,6 +400,27 @@ export function Login({ rectorEntry = false }) {
       E(errorMessage(x));
     } finally {
       B(false);
+    }
+  }
+  async function exploreDemo() {
+    B(true);
+    E("");
+    try {
+      const u = await loginDemoRector();
+      nav(homePathForUser(u), { replace: true });
+    } catch (x) {
+      E(errorMessage(x));
+    } finally {
+      B(false);
+    }
+  }
+  async function copyDemoCredential(kind, value) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedCredential(kind);
+      window.setTimeout(() => setCopiedCredential(""), 1600);
+    } catch {
+      E("Copying is unavailable in this browser. Select and copy the credential instead.");
     }
   }
   return (
@@ -429,18 +487,74 @@ export function Login({ rectorEntry = false }) {
           {busy ? "Signing in…" : "Sign in"}
           <ArrowRight size={17} />
         </button>
-        <p className="auth-foot">
-          {rectorEntry ? (
-            <>
-              Not a Rector? <Link to="/login">Student sign in →</Link>
-            </>
-          ) : (
+        {!rectorEntry && (
+          <p className="auth-foot">
             <>
               Not a student? <Link to="/rector-login">Rector sign in →</Link>
             </>
-          )}
-        </p>
+          </p>
+        )}
       </form>
+      {rectorEntry && (
+        <>
+          <div className="rector-demo-divider" aria-hidden="true"><span>or</span></div>
+          <aside className="rector-demo-access" aria-labelledby="rector-demo-title">
+            <div className="rector-demo-copy">
+              <span className="rector-demo-icon"><Building2 size={23} aria-hidden="true" /></span>
+              <div>
+                <h2 id="rector-demo-title">Demo Rector Credentials</h2>
+                <p>Use this account to explore the sample Rector portal.</p>
+              </div>
+            </div>
+            <>
+              <div className="rector-demo-credentials">
+                {[
+                  ["Email", "email", PUBLIC_DEMO_RECTOR_CREDENTIALS.email],
+                  ["Password", "password", PUBLIC_DEMO_RECTOR_CREDENTIALS.password],
+                ].map(([label, key, value]) => (
+                  <div className="rector-demo-credential-row" key={key}>
+                    <span className="rector-demo-credential-label">{label}</span>
+                    <code>{value}</code>
+                    <button
+                      type="button"
+                      className="rector-demo-copy-button"
+                      aria-label={`Copy demo ${label.toLowerCase()}`}
+                      title={`Copy demo ${label.toLowerCase()}`}
+                      onClick={() => copyDemoCredential(key, value)}
+                    >
+                      {copiedCredential === key ? <Check size={16} /> : <Copy size={16} />}
+                    </button>
+                  </div>
+                ))}
+                <span className="rector-demo-copy-status" aria-live="polite">
+                  {copiedCredential ? `${copiedCredential === "email" ? "Email" : "Password"} copied` : ""}
+                </span>
+              </div>
+              <p className="rector-demo-setup-message" role="status">
+                Use these credentials to explore the Rector portal.
+                {demoCredentialsStatus === "ready"
+                  ? " The demo account is verified and ready."
+                  : demoCredentialsStatus === "loading"
+                    ? " Checking whether the account is provisioned…"
+                    : " The demo account is not verified on this server; quick demo access is unavailable."}
+              </p>
+            </>
+          <button
+            type="button"
+            className="button secondary rector-demo-button"
+            onClick={exploreDemo}
+            disabled={busy || demoCredentialsStatus !== "ready"}
+          >
+            {busy ? "Opening demo…" : "Explore Rector Demo"}
+            {!busy && <ArrowRight size={16} aria-hidden="true" />}
+          </button>
+          <small>Demo access · Sample hostel data</small>
+          </aside>
+          <p className="auth-foot rector-demo-footer">
+            Not a Rector? <Link to="/login">Student sign in <ArrowRight size={15} aria-hidden="true" /></Link>
+          </p>
+        </>
+      )}
     </AuthPanel>
   );
 }
@@ -3075,7 +3189,8 @@ export function RectorDashboard() {
   const user = useAuth().user;
   const found = useLoad(() => foundApi.getFound({ page: 1, limit: 100 }), []),
     analytic = useLoad(analyticsApi.getRectorAnalytics, []),
-    users = useLoad(userApi.getUsers, []);
+    users = useLoad(userApi.getUsers, []),
+    activity = useLoad(() => notifApi.getNotifications({ page: 1, limit: 5 }), []);
   const rows = found.data?.data?.data || [];
   const pending = rows.filter((i) =>
     ["REPORTED", "AWAITING_HANDOVER"].includes(i.status),
@@ -3135,12 +3250,10 @@ export function RectorDashboard() {
         />
       </div>
       <div className="notice-banner">
-        <AlertCircle size={19} />
+        <ClipboardCheck size={19} />
         <p>
-          <b>Claim queue access unavailable.</b> The backend provides individual
-          claim review actions but no Rector endpoint to list claims needing
-          review. Claims requiring verification cannot be loaded in this
-          dashboard.
+          <b>Claim verification</b> Review ownership requests for your assigned hostel.
+          <Link to="/rector-claims">Open Claim Verification Center <ArrowRight size={15} /></Link>
         </p>
       </div>
       <section className="panel rector-panel">
@@ -3265,6 +3378,30 @@ export function RectorDashboard() {
           )}
         </section>
       </div>
+      <section className="panel rector-panel rector-activity-panel">
+        <div className="section-title">
+          <div>
+            <div className="eyebrow">RECENT ACTIVITY</div>
+            <h2>Latest updates</h2>
+          </div>
+          <Link className="text-button" to="/notifications">All notifications <ArrowRight size={15} /></Link>
+        </div>
+        {activity.loading ? <Loading /> : activity.error ? (
+          <ErrorState message={activity.error} onRetry={activity.reload} />
+        ) : activity.data?.notifications?.length ? (
+          <div className="mini-list">
+            {activity.data.notifications.map((notification) => (
+              <div className="mini-item" key={notification._id}>
+                <div>
+                  <b>{notification.title}</b>
+                  <small>{notification.message}</small>
+                </div>
+                <time dateTime={notification.createdAt}>{fmtDate(notification.createdAt)}</time>
+              </div>
+            ))}
+          </div>
+        ) : <EmptyState title="No recent updates" />}
+      </section>
     </div>
   );
 }
@@ -4514,23 +4651,84 @@ export function Profile() {
 }
 
 export function RectorClaims() {
+  const claims = useLoad(() => claimApi.getRectorClaims({ page: 1, limit: 100 }), []);
+  const rows = claims.data?.data?.data || [];
+  async function updateClaim(id, status, rejectionReason) {
+    try {
+      await claimApi.reviewClaim(id, { status, ...(rejectionReason ? { rejectionReason } : {}) });
+      claims.reload();
+    } catch (error) {
+      alert(errorMessage(error));
+    }
+  }
+  async function requestInformation(id) {
+    const infoRequestedReason = window.prompt("What additional ownership evidence should the student provide?");
+    if (!infoRequestedReason?.trim()) return;
+    try {
+      await claimApi.requestInformation(id, infoRequestedReason.trim());
+      claims.reload();
+    } catch (error) {
+      alert(errorMessage(error));
+    }
+  }
+  function rejectClaim(id) {
+    const reason = window.prompt("Enter a reason for rejecting this claim:");
+    if (!reason?.trim()) return;
+    updateClaim(id, "REJECTED", reason.trim());
+  }
+
   return (
     <div className="content">
       <PageHead
         eyebrow="CLAIM REVIEW"
-        title="Claims requiring verification"
-        description="Review requests and verify ownership carefully."
+        title="Claim Verification Center"
+        description="Review ownership requests and verify evidence for items in your assigned hostel."
       />
-      <div className="notice-banner">
-        <AlertCircle size={19} />
-        <p>
-          The backend has review, approval, rejection and request information
-          actions, but does not expose an endpoint for Rectors to list claims.
-          This page cannot show claim records until that backend endpoint
-          exists.
-        </p>
-      </div>
-      <EmptyState title="Claim queue is not available" />
+      <section className="panel rector-panel">
+        <div className="section-title">
+          <div>
+            <div className="eyebrow">ASSIGNED HOSTEL</div>
+            <h2>Ownership claims</h2>
+          </div>
+          <span className="counter-pill">{rows.length} claims</span>
+        </div>
+        {claims.loading ? <Loading label="Loading hostel claims…" /> : claims.error ? (
+          <ErrorState message={claims.error} onRetry={claims.reload} />
+        ) : rows.length ? (
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Item</th><th>Claimant</th><th>Evidence</th><th>Status</th><th>Review</th></tr></thead>
+              <tbody>
+                {rows.map((claim) => (
+                  <tr key={claim._id}>
+                    <td>
+                      <b>{claim.foundReportId?.itemName || "Found item"}</b>
+                      <small>{claim.foundReportId?.category || ""} · {fmtDate(claim.createdAt)}</small>
+                    </td>
+                    <td>
+                      <b>{claim.claimantId?.name || "Student"}</b>
+                      <small>{claim.claimantId?.studentId || claim.claimantId?.email || ""}</small>
+                    </td>
+                    <td>{claim.evidence || "—"}</td>
+                    <td><Badge value={claim.status} /></td>
+                    <td>
+                      {claim.status === "SUBMITTED" ? (
+                        <button className="button outline small" onClick={() => updateClaim(claim._id, "UNDER_VERIFICATION")}>Begin verification</button>
+                      ) : claim.status === "UNDER_VERIFICATION" ? (
+                        <div className="claim-review-actions">
+                          <button className="text-button" onClick={() => requestInformation(claim._id)}>Request info</button>
+                          <button className="button outline small" onClick={() => updateClaim(claim._id, "APPROVED")}>Approve</button>
+                          <button className="text-button" onClick={() => rejectClaim(claim._id)}>Reject</button>
+                        </div>
+                      ) : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : <EmptyState title="No claims to review" />}
+      </section>
     </div>
   );
 }

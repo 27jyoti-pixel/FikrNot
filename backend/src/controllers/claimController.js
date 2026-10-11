@@ -1,5 +1,5 @@
 const asyncWrapper = require('../utils/asyncWrapper');
-const { successResponse } = require('../utils/apiResponse');
+const { successResponse, paginatedResponse } = require('../utils/apiResponse');
 const claimService = require('../services/claims/claimService');
 
 const submitClaim = asyncWrapper(async (req, res) => {
@@ -10,6 +10,17 @@ const submitClaim = asyncWrapper(async (req, res) => {
 const getMyClaims = asyncWrapper(async (req, res) => {
   const claims = await claimService.getStudentClaims(req.user);
   return successResponse(res, 200, 'User claims retrieved', claims);
+});
+
+const getRectorClaims = asyncWrapper(async (req, res) => {
+  const result = await claimService.getRectorClaims(req.user, req.query);
+  return paginatedResponse(
+    res,
+    200,
+    'Hostel claims retrieved successfully',
+    result.claims,
+    result.pagination
+  );
 });
 
 const getClaimById = asyncWrapper(async (req, res) => {
@@ -42,6 +53,7 @@ const requestInformation = asyncWrapper(async (req, res) => {
 module.exports = {
   submitClaim,
   getMyClaims,
+  getRectorClaims,
   getClaimById,
   updateEvidence,
   withdrawClaim,

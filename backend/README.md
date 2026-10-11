@@ -143,6 +143,24 @@ CLIENT_URL=https://fikrnot-1.onrender.com
 
 `CLIENT_URL` may contain comma-separated additional origins. CORS always permits the deployed FikrNot frontend and local Vite development origins (`http://localhost:3000` and `http://localhost:5173`). On Render, set `CLIENT_URL=https://fikrnot-1.onrender.com`.
 
+### Demo Rector access
+
+On the backend Render service, configure `DEMO_RECTOR_EMAIL=rector@gmail.com` and `DEMO_RECTOR_PASSWORD=rector123`. These are intentionally public demo-only credentials; keep them on the backend service and never add database or JWT secrets to frontend variables. `DEMO_HOSTEL_NAME` defaults to `FikrNot Demo Hostel`; keep that reserved name consistent if overriding it. The provisioner uses the User model's password hashing and login validation, and refuses to take over an email or reserved marker assigned to another account.
+
+Provision the designated account and its isolated sample data from the backend service shell after setting the environment variables:
+
+```sh
+npm run provision:demo-rector
+```
+
+The command connects using the configured `MONGODB_URI`, creates the `DEMO-RECTOR` account and an inactive (not publicly selectable) demo hostel, and creates clearly prefixed sample records. It is idempotent. Re-running it resets only those named demo sample records to their initial states; it refuses to take over an account, hostel, or sample identifier that belongs to another account. It does not clear collections or alter real hostels or records. The demo Rector can access and modify data only in its separately assigned demo hostel under the existing Rector authorization and hostel filters.
+
+The public Rector login page displays the dedicated public demo email and password with copy controls. The page separately calls `GET /api/auth/demo-credentials`; it marks demo access ready only after the endpoint verifies that the account is active, has the reserved `DEMO-RECTOR` marker, belongs to the configured demo hostel, and that its stored password hash matches the configured password. Until then, the credentials remain visible but the quick-demo button stays disabled and the page reports that setup is unverified. The endpoint never returns credentials for another Rector.
+
+The **Explore Rector Demo** button calls `POST /api/auth/demo-rector`. The backend verifies the same account through the normal password comparison and issues the usual JWT only after the role, marker, and hostel checks pass. Normal Rector sign-in continues to use `POST /api/auth/login`.
+
+For Render, configure `CLIENT_URL=https://fikrnot-1.onrender.com` and `DEMO_RECTOR_EMAIL`, `DEMO_RECTOR_PASSWORD`; deploy the backend, run the provisioning command once in its shell, then deploy the frontend. The frontend service must also have `VITE_API_URL=https://fikrnot-4xsa.onrender.com` and be rebuilt/redeployed so its production bundle uses the backend origin.
+
 ---
 
 ## 4. Running the Backend & Seeding Data

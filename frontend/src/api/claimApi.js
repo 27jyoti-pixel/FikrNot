@@ -2,6 +2,7 @@ import http, { dataOf, listOf } from "./axiosClient";
 export const createClaim = async (body) =>
   dataOf(await http.post("/claims", body));
 export const getMyClaims = async () => listOf(await http.get("/claims/my"));
+export const getRectorClaims = (params) => http.get("/claims/rector", { params });
 export const getClaim = async (id) => dataOf(await http.get(`/claims/${id}`));
 export const updateEvidence = (id, evidence) =>
   http.put(`/claims/${id}/evidence`, { evidence });

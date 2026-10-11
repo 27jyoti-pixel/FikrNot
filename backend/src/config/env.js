@@ -11,5 +11,8 @@ module.exports = {
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || '',
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || '',
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || '',
-  CLIENT_URL: process.env.CLIENT_URL || 'https://fikrnot-1.onrender.com'
+  CLIENT_URL: process.env.CLIENT_URL || 'https://fikrnot-1.onrender.com',
+  DEMO_RECTOR_EMAIL: process.env.DEMO_RECTOR_EMAIL || '',
+  DEMO_RECTOR_PASSWORD: process.env.DEMO_RECTOR_PASSWORD || '',
+  DEMO_HOSTEL_NAME: process.env.DEMO_HOSTEL_NAME || 'FikrNot Demo Hostel'
 };

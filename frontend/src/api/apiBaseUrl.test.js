@@ -38,6 +38,31 @@ test("does not allow a production build to target a loopback API URL", () => {
   );
 });
 
+test("production authentication URLs stay on Render if a stale local env is injected", () => {
+  const client = axios.create({
+    baseURL: resolveApiBaseUrl("http://localhost:5000/api", false),
+  });
+  assert.equal(
+    client.getUri({ url: "/auth/login" }),
+    "https://fikrnot-4xsa.onrender.com/api/auth/login",
+  );
+  assert.equal(
+    client.getUri({ url: "/auth/demo-credentials" }),
+    "https://fikrnot-4xsa.onrender.com/api/auth/demo-credentials",
+  );
+});
+
+test("a development-mode bundle served on the production hostname cannot call localhost", () => {
+  assert.equal(
+    resolveApiBaseUrl(
+      "http://localhost:5000",
+      true,
+      "fikrnot-1.onrender.com",
+    ),
+    "https://fikrnot-4xsa.onrender.com/api",
+  );
+});
+
 test("resolves login and hostel requests to the existing /api routes", () => {
   const client = axios.create({
     baseURL: resolveApiBaseUrl("https://fikrnot-4xsa.onrender.com", false),
@@ -46,6 +71,10 @@ test("resolves login and hostel requests to the existing /api routes", () => {
   assert.equal(
     client.getUri({ url: "/auth/login" }),
     "https://fikrnot-4xsa.onrender.com/api/auth/login",
+  );
+  assert.equal(
+    client.getUri({ url: "/auth/demo-credentials" }),
+    "https://fikrnot-4xsa.onrender.com/api/auth/demo-credentials",
   );
   assert.equal(
     client.getUri({ url: "/hostels" }),

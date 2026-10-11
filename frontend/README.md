@@ -12,6 +12,8 @@ Vite uses port `3000` to match the backend's configured CORS origin. Production 
 
 For the Render frontend service, set `VITE_API_URL=https://fikrnot-4xsa.onrender.com`. Rebuild and redeploy the frontend after changing this value. If it is unset, development uses `http://localhost:5000`; production uses the deployed backend URL.
 
+The Rector sign-in page displays the intentionally public demo credentials `rector@gmail.com` / `rector123` with copy controls. It marks access ready and enables **Explore Rector Demo** only after the backend confirms that the reserved account is provisioned and its password hash matches. The quick-demo action creates a session through the normal backend authentication flow. See the backend README for Render environment variables and isolated demo-hostel provisioning steps.
+
 ## Structure
 
 - `src/api/` holds all Axios calls and endpoint paths.
