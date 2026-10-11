@@ -9,10 +9,9 @@ export function resolveApiBaseUrl(configuredUrl, isDevelopment) {
   const pointsToLoopback = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?(?:\/|$)/i.test(
     configured,
   );
-  const selectedUrl = !isDevelopment && pointsToLoopback ? fallback : configured || fallback;
-  const origin = selectedUrl
-    .trim()
-    .replace(/\/+$/, "");
+  const selectedUrl =
+    !isDevelopment && pointsToLoopback ? fallback : configured || fallback;
+  const origin = selectedUrl.trim().replace(/\/+$/, "");
 
   return /\/api$/i.test(origin) ? origin : `${origin}/api`;
 }

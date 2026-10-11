@@ -27,4 +27,4 @@ For the Render frontend service, set `VITE_API_URL=https://fikrnot-4xsa.onrender
 - The backend has no Rector claims-list endpoint, so the UI cannot load a review queue or offer claim-specific review actions in the Rector dashboard.
 - Lost and found list services do not filter by location area. Browse supports category, status, hostel, item name and date range; location-area filtering requires a backend query contract.
 
-These are recorded as backend dependencies; no backend or backup frontend files were changed.
+These notes describe separate functionality outside the API URL and CORS fixes.
