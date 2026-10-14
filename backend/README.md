@@ -145,21 +145,27 @@ CLIENT_URL=https://fikrnot-1.onrender.com
 
 ### Demo Rector access
 
-On the backend Render service, configure `DEMO_RECTOR_EMAIL=rector@gmail.com` and `DEMO_RECTOR_PASSWORD=rector123`. These are intentionally public demo-only credentials; keep them on the backend service and never add database or JWT secrets to frontend variables. `DEMO_HOSTEL_NAME` defaults to `FikrNot Demo Hostel`; keep that reserved name consistent if overriding it. The provisioner uses the User model's password hashing and login validation, and refuses to take over an email or reserved marker assigned to another account.
+On the backend Render service, set `DEMO_RECTOR_EMAIL`, `DEMO_RECTOR_PASSWORD`, and `DEMO_HOSTEL_NAME`. Choose `DEMO_HOSTEL_NAME` from a hostel that already exists in the target database, is active, has no Rector assignment, and has no users or lost/found reports; copy its exact name from Atlas. Do not use the inactive legacy `Shivaji Hostel` or `Tagore Hostel`, and do not activate or rename a real hostel for the demo. Keep database credentials and JWT secrets only in the backend service environment; never add them to frontend variables.
 
-Provision the designated account and its isolated sample data from the backend service shell after setting the environment variables:
+To provision against MongoDB Atlas, first confirm the backend Render service's `MONGODB_URI` points to the intended Atlas cluster and database, and that its network access list allows the command's execution environment. Set the three demo variables on that same backend service. After those settings are saved, open the backend service shell in Render and run:
 
 ```sh
 npm run provision:demo-rector
 ```
 
-The command connects using the configured `MONGODB_URI`, creates the `DEMO-RECTOR` account and an inactive (not publicly selectable) demo hostel, and creates clearly prefixed sample records. It is idempotent. Re-running it resets only those named demo sample records to their initial states; it refuses to take over an account, hostel, or sample identifier that belongs to another account. It does not clear collections or alter real hostels or records. The demo Rector can access and modify data only in its separately assigned demo hostel under the existing Rector authorization and hostel filters.
+The command uses the backend service's configured `MONGODB_URI`. For a new account, it requires the exact configured hostel to exist, be active and unassigned, and contain no users or lost/found reports. It creates or updates only the reserved Demo Rector account and uses the User model's normal save hook to store a bcrypt hash. It never creates or activates hostels, prints the password, or modifies unrelated accounts. Re-running it is safe. It refuses an email collision, a conflicting reserved employee ID, a different existing Rector assignment, or a missing/inactive/mismatched/occupied hostel.
 
 The public Rector login page displays the dedicated public demo email and password with copy controls. The page separately calls `GET /api/auth/demo-credentials`; it marks demo access ready only after the endpoint verifies that the account is active, has the reserved `DEMO-RECTOR` marker, belongs to the configured demo hostel, and that its stored password hash matches the configured password. Until then, the credentials remain visible but the quick-demo button stays disabled and the page reports that setup is unverified. The endpoint never returns credentials for another Rector.
 
 The **Explore Rector Demo** button calls `POST /api/auth/demo-rector`. The backend verifies the same account through the normal password comparison and issues the usual JWT only after the role, marker, and hostel checks pass. Normal Rector sign-in continues to use `POST /api/auth/login`.
 
-For Render, configure `CLIENT_URL=https://fikrnot-1.onrender.com` and `DEMO_RECTOR_EMAIL`, `DEMO_RECTOR_PASSWORD`; deploy the backend, run the provisioning command once in its shell, then deploy the frontend. The frontend service must also have `VITE_API_URL=https://fikrnot-4xsa.onrender.com` and be rebuilt/redeployed so its production bundle uses the backend origin.
+Render deployment and verification:
+
+1. Set `DEMO_RECTOR_EMAIL`, `DEMO_RECTOR_PASSWORD`, and the exact active `DEMO_HOSTEL_NAME` on the backend Render service. Confirm `MONGODB_URI` targets the intended Atlas database. Save the changes and trigger a backend redeploy/restart so the running process receives them.
+2. From the backend service shell, run `npm run provision:demo-rector`. Success reports the active hostel name, without printing the email, password, or database URI.
+3. Verify `GET https://fikrnot-4xsa.onrender.com/api/auth/demo-credentials` returns HTTP 200 and the configured demo email. This endpoint intentionally returns the demo password only after database checks; do not paste its response into logs or public channels. Verify `POST /api/auth/demo-rector` returns HTTP 200 with a Rector user and token. The frontend's Explore Rector Demo action uses this same login endpoint.
+4. If `GET /api/auth/demo-credentials` returns `DEMO_RECTOR_CONFIG_MISSING`, check that all variables are on the backend service (not the frontend/static site), save, and restart/redeploy the backend. `DEMO_RECTOR_ACCOUNT_NOT_PROVISIONED` means configuration was loaded but step 2 has not succeeded; hostel and password mismatch diagnostic codes indicate the provisioned record needs investigation.
+5. Set `CLIENT_URL=https://fikrnot-1.onrender.com` on the backend. Set `VITE_API_URL=https://fikrnot-4xsa.onrender.com` on the frontend and rebuild/redeploy it so the production bundle uses the backend origin.
 
 ---
 

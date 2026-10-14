@@ -530,16 +530,16 @@ export function Login({ rectorEntry = false }) {
                   {copiedCredential ? `${copiedCredential === "email" ? "Email" : "Password"} copied` : ""}
                 </span>
               </div>
-              <p className="rector-demo-setup-message" role="status">
-                Use these credentials to explore the Rector portal.
-                {demoCredentialsStatus === "ready"
+              {/* <p className="rector-demo-setup-message" role="status"> */}
+                {/* Use these credentials to explore the Rector portal. */}
+                {/* {demoCredentialsStatus === "ready"
                   ? " The demo account is verified and ready."
                   : demoCredentialsStatus === "loading"
                     ? " Checking whether the account is provisioned…"
-                    : " The demo account is not verified on this server; quick demo access is unavailable."}
-              </p>
+                    : " The demo account is not verified on this server; quick demo access is unavailable."} */}
+              {/* </p> */}
             </>
-          <button
+          {/* <button
             type="button"
             className="button secondary rector-demo-button"
             onClick={exploreDemo}
@@ -547,8 +547,8 @@ export function Login({ rectorEntry = false }) {
           >
             {busy ? "Opening demo…" : "Explore Rector Demo"}
             {!busy && <ArrowRight size={16} aria-hidden="true" />}
-          </button>
-          <small>Demo access · Sample hostel data</small>
+          </button> */}
+          {/* <small>Demo access · Sample hostel data</small> */}
           </aside>
           <p className="auth-foot rector-demo-footer">
             Not a Rector? <Link to="/login">Student sign in <ArrowRight size={15} aria-hidden="true" /></Link>

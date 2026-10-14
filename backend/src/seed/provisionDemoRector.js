@@ -1,25 +1,19 @@
-const crypto = require('node:crypto');
 const mongoose = require('mongoose');
 const env = require('../config/env');
 const User = require('../models/User');
 const Hostel = require('../models/Hostel');
 const LostReport = require('../models/LostReport');
 const FoundReport = require('../models/FoundReport');
-const { ROLES, LOST_STATUS, FOUND_STATUS } = require('../constants');
+const { ROLES } = require('../constants');
 const authService = require('../services/auth/authService');
 const { DEMO_RECTOR_EMPLOYEE_ID } = authService;
 
-const DEMO_STUDENT_ID = 'DEMO-STUDENT-001';
-const DEMO_STUDENT_EMAIL = 'sample.student@demo.invalid';
-const DEMO_ITEMS = {
-  lost: 'DEMO - Water bottle reported missing',
-  awaitingCustody: 'DEMO - Key ring awaiting custody',
-  withRector: 'DEMO - Library book in Rector custody'
-};
+const DEMO_RECTOR_NAME = 'FikrNot Demo Rector';
+const DEMO_RECTOR_DESIGNATION = 'Demo Rector';
 
 const fail = (message) => {
   const error = new Error(message);
-  error.statusCode = 1;
+  error.exitCode = 1;
   throw error;
 };
 
@@ -28,206 +22,123 @@ const sameId = (left, right) => left?.toString() === right?.toString();
 async function provisionDemoRector() {
   const email = String(env.DEMO_RECTOR_EMAIL || '').trim().toLowerCase();
   const password = String(env.DEMO_RECTOR_PASSWORD || '');
-  if (!email || !password) {
-    fail('Set DEMO_RECTOR_EMAIL and DEMO_RECTOR_PASSWORD before provisioning.');
+  const hostelName = String(env.DEMO_HOSTEL_NAME || '').trim();
+  if (!email || !password || !hostelName) {
+    fail('Set DEMO_RECTOR_EMAIL, DEMO_RECTOR_PASSWORD, and DEMO_HOSTEL_NAME before provisioning.');
   }
-  if (password.length < 6) {
-    fail('DEMO_RECTOR_PASSWORD must satisfy the User model minimum of 6 characters.');
-  }
+  if (password.length < 6) fail('DEMO_RECTOR_PASSWORD must be at least 6 characters.');
 
-  const rectorByMarker = await User.findOne({ employeeId: DEMO_RECTOR_EMPLOYEE_ID });
-  const rectorByEmail = await User.findOne({ email });
-  if (rectorByMarker && rectorByMarker.email !== email) {
-    fail('A different account already uses the reserved Demo Rector marker. No changes were made.');
-  }
-  if (rectorByEmail && rectorByEmail.employeeId !== DEMO_RECTOR_EMPLOYEE_ID) {
+  const [rectorByMarker, rectorByEmail, hostel] = await Promise.all([
+    User.findOne({ employeeId: DEMO_RECTOR_EMPLOYEE_ID }),
+    User.findOne({ email }),
+    Hostel.findOne({ name: hostelName })
+  ]);
+
+  if (rectorByEmail && !sameId(rectorByEmail._id, rectorByMarker?._id)) {
     fail('The configured demo email already belongs to another account. No changes were made.');
   }
+  if (rectorByMarker && rectorByMarker.email?.toLowerCase() !== email) {
+    fail('A different account already uses the reserved Demo Rector employee ID. No changes were made.');
+  }
   if (rectorByMarker && rectorByMarker.role !== ROLES.RECTOR) {
-    fail('The reserved Demo Rector marker belongs to a non-Rector account. No changes were made.');
+    fail('The reserved Demo Rector employee ID belongs to a non-Rector account. No changes were made.');
   }
-  if (
-    rectorByMarker &&
-    (rectorByMarker.name !== 'FikrNot Demo Rector' || rectorByMarker.designation !== 'Demo Rector')
-  ) {
-    fail('The reserved Demo Rector marker does not identify the designated demo account. No changes were made.');
+  if (rectorByMarker && (rectorByMarker.name !== DEMO_RECTOR_NAME || rectorByMarker.designation !== DEMO_RECTOR_DESIGNATION)) {
+    fail('The reserved employee ID is attached to an account not identified as the Demo Rector. No changes were made.');
   }
-
-  let hostel = await Hostel.findOne({ name: env.DEMO_HOSTEL_NAME });
-  if (rectorByMarker?.hostelId) {
-    const assignedHostel = await Hostel.findById(rectorByMarker.hostelId);
-    if (assignedHostel && assignedHostel.name !== env.DEMO_HOSTEL_NAME) {
-      fail('The marked Demo Rector is assigned to another hostel. No changes were made.');
-    }
+  if (!hostel || !hostel.isActive || hostel.name !== hostelName) {
+    fail('DEMO_HOSTEL_NAME must exactly match an existing active hostel. No changes were made.');
   }
-  if (hostel && hostel.rectorId && !sameId(hostel.rectorId, rectorByMarker?._id)) {
-    fail('The reserved demo hostel is assigned to another account. No changes were made.');
+  if (rectorByMarker?.hostelId && !sameId(rectorByMarker.hostelId, hostel._id)) {
+    fail('The Demo Rector is already assigned to another hostel. No changes were made.');
   }
-  if (hostel && !hostel.rectorId) {
+  if (hostel.rectorId && !sameId(hostel.rectorId, rectorByMarker?._id)) {
+    fail('The configured demo hostel is assigned to another Rector. No changes were made.');
+  }
+  if (!rectorByMarker) {
     const [users, lostReports, foundReports] = await Promise.all([
       User.countDocuments({ hostelId: hostel._id }),
       LostReport.countDocuments({ hostelId: hostel._id }),
       FoundReport.countDocuments({ hostelId: hostel._id })
     ]);
     if (users || lostReports || foundReports) {
-      fail('The reserved demo hostel already contains records. No changes were made.');
+      fail('A new Demo Rector requires an active, unassigned hostel with no existing records. No changes were made.');
     }
-  }
-
-  if (rectorByMarker?.hostelId && hostel && !sameId(rectorByMarker.hostelId, hostel._id)) {
-    fail('The marked Demo Rector is assigned to another hostel. No changes were made.');
-  }
-
-  if (!hostel) {
-    hostel = await Hostel.create({
-      name: env.DEMO_HOSTEL_NAME,
-      capacity: 250,
-      isActive: false,
-      location: {
-        type: 'Point',
-        coordinates: [73.8567, 18.5204],
-        area: 'Demo Campus'
-      }
-    });
   }
 
   let rector = rectorByMarker;
   if (rector) {
-    rector.name = 'FikrNot Demo Rector';
     rector.email = email;
     rector.password = password;
-    rector.designation = 'Demo Rector';
-    rector.hostelId = hostel._id;
+    rector.role = ROLES.RECTOR;
+    rector.employeeId = DEMO_RECTOR_EMPLOYEE_ID;
     rector.isActive = true;
+    rector.hostelId = hostel._id;
     await rector.save();
   } else {
     rector = await User.create({
-      name: 'FikrNot Demo Rector',
+      name: DEMO_RECTOR_NAME,
       email,
       password,
       role: ROLES.RECTOR,
       employeeId: DEMO_RECTOR_EMPLOYEE_ID,
-      designation: 'Demo Rector',
-      hostelId: hostel._id
+      designation: DEMO_RECTOR_DESIGNATION,
+      hostelId: hostel._id,
+      isActive: true
     });
   }
 
   if (!sameId(hostel.rectorId, rector._id)) {
     hostel.rectorId = rector._id;
-  }
-  hostel.isActive = false;
-  await hostel.save();
-
-  let student = await User.findOne({ studentId: DEMO_STUDENT_ID });
-  if (student) {
-    if (
-      student.role !== ROLES.STUDENT ||
-      !sameId(student.hostelId, hostel._id) ||
-      student.email !== DEMO_STUDENT_EMAIL
-    ) {
-      fail('The reserved demo student identifier is already in use. No changes were made.');
-    }
-  } else {
-    const emailConflict = await User.findOne({ email: DEMO_STUDENT_EMAIL });
-    if (emailConflict) {
-      fail('The reserved demo student email is already in use. No changes were made.');
-    }
-    student = await User.create({
-      name: 'Demo Sample Student',
-      email: DEMO_STUDENT_EMAIL,
-      password: crypto.randomBytes(32).toString('hex'),
-      role: ROLES.STUDENT,
-      studentId: DEMO_STUDENT_ID,
-      hostelId: hostel._id,
-      roomNumber: 'D-01'
-    });
+    await hostel.save();
   }
 
-  await ensureLostReport(student, hostel);
-  await ensureFoundReport(student, rector, hostel, DEMO_ITEMS.awaitingCustody, FOUND_STATUS.REPORTED);
-  await ensureFoundReport(student, rector, hostel, DEMO_ITEMS.withRector, FOUND_STATUS.WITH_RECTOR);
-
-  // Exercise the exact login/JWT path used by both manual and quick demo sign-in.
-  const verifiedLogin = await authService.loginDemoRector();
-  if (verifiedLogin.user.email !== email || verifiedLogin.user.role !== ROLES.RECTOR) {
-    fail('Demo Rector authentication verification failed after provisioning.');
+  // Verify the same persisted account via the app's normal password and demo checks.
+  const persisted = await User.findOne({ email }).select('+password');
+  if (!persisted || !(await persisted.comparePassword(password))) {
+    fail('Provisioning completed but password verification failed.');
+  }
+  if (
+    persisted.role !== ROLES.RECTOR || !persisted.isActive ||
+    persisted.employeeId !== DEMO_RECTOR_EMPLOYEE_ID ||
+    !sameId(persisted.hostelId, hostel._id)
+  ) {
+    fail('Provisioning completed but account verification failed.');
+  }
+  const credentials = await authService.getDemoRectorCredentials();
+  const login = await authService.loginDemoRector();
+  if (credentials.email !== email || login.user.email !== email || login.user.role !== ROLES.RECTOR) {
+    fail('Provisioning completed but application demo authentication verification failed.');
   }
 
-  return { email, hostelName: hostel.name, loginVerified: true };
-}
-
-async function ensureLostReport(student, hostel) {
-  const existing = await LostReport.findOne({ hostelId: hostel._id, itemName: DEMO_ITEMS.lost });
-  if (existing) {
-    if (!sameId(existing.reportedBy, student._id)) {
-      fail('A reserved demo lost report belongs to another account. No changes were made.');
-    }
-    existing.status = LOST_STATUS.ACTIVE;
-    existing.cancellation = { isCancelled: false };
-    await existing.save();
-    return;
-  }
-  await LostReport.create({
-    reportedBy: student._id,
-    hostelId: hostel._id,
-    category: 'Accessories',
-    itemName: DEMO_ITEMS.lost,
-    description: 'Sample record for evaluator walkthroughs.',
-    location: { area: 'Demo Library' },
-    status: LOST_STATUS.ACTIVE
-  });
-}
-
-async function ensureFoundReport(student, rector, hostel, itemName, status) {
-  const existing = await FoundReport.findOne({ hostelId: hostel._id, itemName });
-  if (existing) {
-    if (!sameId(existing.reportedBy, student._id)) {
-      fail('A reserved demo found report belongs to another account. No changes were made.');
-    }
-    existing.status = status;
-    existing.cancellation = { isCancelled: false };
-    if (status === FOUND_STATUS.WITH_RECTOR) {
-      existing.rectorId = rector._id;
-      existing.receivedAt = new Date();
-    } else {
-      existing.rectorId = undefined;
-      existing.receivedAt = undefined;
-    }
-    await existing.save();
-    return;
-  }
-  await FoundReport.create({
-    reportedBy: student._id,
-    hostelId: hostel._id,
-    category: itemName.includes('Key') ? 'Keys' : 'Books/Stationery',
-    itemName,
-    description: 'Sample record for evaluator walkthroughs.',
-    location: { area: 'Demo Library' },
-    status,
-    ...(status === FOUND_STATUS.WITH_RECTOR
-      ? { rectorId: rector._id, receivedAt: new Date() }
-      : {})
-  });
+  return { hostelName: hostel.name, created: !rectorByMarker };
 }
 
 async function main() {
+  if (
+    !env.MONGODB_URI ||
+    !/^mongodb(?:\+srv)?:\/\//i.test(env.MONGODB_URI) ||
+    env.MONGODB_URI === 'mongodb://127.0.0.1:27017/fikrnot' ||
+    /@?(?:localhost|127\.0\.0\.1)(?=[:/])/i.test(env.MONGODB_URI)
+  ) {
+    fail('Set MONGODB_URI to the intended remote MongoDB Atlas database before provisioning.');
+  }
   await mongoose.connect(env.MONGODB_URI, { serverSelectionTimeoutMS: 10000 });
   const result = await provisionDemoRector();
-  console.log(`Demo Rector provisioned for ${result.hostelName}.`);
-  console.log('Authentication verified through the application login and JWT flow.');
-  console.log(`Demo email: ${result.email}`);
-  console.log('The password is read from DEMO_RECTOR_PASSWORD and is not printed.');
+  console.log(`Demo Rector ${result.created ? 'created' : 'updated'} and verified for active hostel: ${result.hostelName}.`);
+  console.log('No password or database connection details were printed.');
 }
 
 if (require.main === module) {
   main()
     .catch((error) => {
-      console.error(error.message);
-      process.exitCode = 1;
+      if (error.exitCode) console.error(error.message);
+      else console.error('Demo Rector provisioning failed. Check the target database and service access; connection details were omitted.');
+      process.exitCode = error.exitCode || 1;
     })
     .finally(async () => {
       if (mongoose.connection.readyState) await mongoose.disconnect();
     });
 }
 
-module.exports = { provisionDemoRector, DEMO_ITEMS };
+module.exports = { provisionDemoRector };
