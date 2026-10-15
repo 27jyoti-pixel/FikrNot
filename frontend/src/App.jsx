@@ -13,6 +13,8 @@ import {
   Profile,
   RectorClaims,
   RectorDashboard,
+  RectorStudents,
+  RectorStudentDetail,
   Register,
   ReportForm,
   StudentDashboard,
@@ -53,6 +55,8 @@ export default function App() {
         <Route element={<ProtectedRoute role="rector" />}>
           <Route path="rector-dashboard" element={<RectorDashboard />} />
           <Route path="rector-claims" element={<RectorClaims />} />
+          <Route path="rector-students" element={<RectorStudents />} />
+          <Route path="rector-students/:id" element={<RectorStudentDetail />} />
         </Route>
 
         <Route path="*" element={<NotFound />} />

@@ -5,5 +5,10 @@ export const updateProfile = async (body) =>
   dataOf(await http.put("/users/me", body));
 export const getUsers = async (params) =>
   listOf(await http.get("/users", { params }));
+export const getUsersPage = (params) => http.get("/users", { params });
+export const getRectorStudentSummary = async () =>
+  dataOf(await http.get("/users/rector-summary"));
+export const getUser = async (id) =>
+  dataOf(await http.get(`/users/${id}`));
 export const updateUserStatus = (id, isActive) =>
   http.put(`/users/${id}/status`, { isActive });

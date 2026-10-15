@@ -67,6 +67,11 @@ const createFoundReport = async (user, data, uploadedImages = []) => {
 */
 
 const getFoundReports = async (user, query = {}) => {
+  if (user.role === ROLES.RECTOR && !user.hostelId) {
+    const error = new Error('Rector must have an assigned hostel to view found reports.');
+    error.statusCode = 403;
+    throw error;
+  }
   const page = Math.max(parseInt(query.page, 10) || 1, 1);
   const limit = Math.min(
     Math.max(parseInt(query.limit, 10) || 10, 1),
@@ -88,6 +93,7 @@ const getFoundReports = async (user, query = {}) => {
   if (user.role === ROLES.RECTOR) {
     // Rector can only manage/view reports from assigned hostel.
     filter.hostelId = user.hostelId;
+    if (query.reportedBy) filter.reportedBy = query.reportedBy;
   } else if (query.hostelId) {
     // Students can browse across hostels.
     filter.hostelId = query.hostelId;

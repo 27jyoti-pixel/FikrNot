@@ -61,6 +61,11 @@ const createLostReport = async (user, data, uploadedImages = []) => {
 */
 
 const getLostReports = async (user, query = {}) => {
+  if (user.role === ROLES.RECTOR && !user.hostelId) {
+    const error = new Error('Rector must have an assigned hostel to view lost reports.');
+    error.statusCode = 403;
+    throw error;
+  }
   const page = Math.max(parseInt(query.page, 10) || 1, 1);
   const parsedLimit = parseInt(query.limit, 10);
 
@@ -87,6 +92,7 @@ const limit = Math.min(parsedLimit || 10, 100);
   if (user.role === ROLES.RECTOR) {
     // Rector can only manage/view reports from assigned hostel.
     filter.hostelId = user.hostelId;
+    if (query.reportedBy) filter.reportedBy = query.reportedBy;
   } else if (query.hostelId) {
     // Students can browse across hostels and optionally filter by hostel.
     filter.hostelId = query.hostelId;

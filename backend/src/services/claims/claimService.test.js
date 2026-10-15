@@ -52,12 +52,13 @@ test('Rector claim listing is limited to found reports in the assigned hostel', 
   ], async () => {
     const result = await claimService.getRectorClaims(
       { role: 'rector', hostelId },
-      { page: '1', limit: '10', status: 'SUBMITTED' }
+      { page: '1', limit: '10', status: 'SUBMITTED', claimantId: 'student-1' }
     );
     assert.deepEqual(reportFilter, { hostelId });
     assert.deepEqual(claimFilter, {
       foundReportId: { $in: ['assigned-found-1', 'assigned-found-2'] },
-      status: 'SUBMITTED'
+      status: 'SUBMITTED',
+      claimantId: 'student-1'
     });
     assert.equal(result.claims, matchingClaims);
     assert.deepEqual(result.pagination, { page: 1, limit: 10, total: 1, totalPages: 1 });

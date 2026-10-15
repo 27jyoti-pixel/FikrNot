@@ -12,6 +12,7 @@ router.get('/me', protect, userController.getMyProfile);
 router.put('/me', protect, upload.single('profileImage'), handleImageUpload, userController.updateMyProfile);
 router.get('/me/activity', protect, userController.getMyActivitySummary);
 
+router.get('/rector-summary', protect, authorize(ROLES.RECTOR), userController.getRectorStudentSummary);
 router.get('/', protect, authorize(ROLES.RECTOR), userController.getUsers);
 router.get('/:id', protect, mongoIdParamValidator('id'), validate, userController.getUserById);
 router.put('/:id/status', protect, authorize(ROLES.RECTOR), mongoIdParamValidator('id'), userStatusValidator, validate, userController.updateUserStatus);

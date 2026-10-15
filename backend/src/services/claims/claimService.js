@@ -222,6 +222,7 @@ const getRectorClaims = async (rector, query = {}) => {
   const foundReports = await FoundReport.find({ hostelId: rector.hostelId }).select('_id');
   const filter = { foundReportId: { $in: foundReports.map((report) => report._id) } };
   if (Object.values(CLAIM_STATUS).includes(query.status)) filter.status = query.status;
+  if (query.claimantId) filter.claimantId = query.claimantId;
 
   const [total, claims] = await Promise.all([
     Claim.countDocuments(filter),

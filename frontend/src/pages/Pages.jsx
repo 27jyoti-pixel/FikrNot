@@ -66,6 +66,11 @@ import {
   PackageCheck,
   RotateCw,
   ArrowLeft,
+  ArrowDown,
+  MoreVertical,
+  Compass,
+  SlidersHorizontal,
+  Info,
   Activity,
   Pencil,
   GraduationCap,
@@ -73,6 +78,7 @@ import {
   Sun,
   BarChart3,
   FileText,
+  Tag,
   Hourglass,
   Send,
   Settings,
@@ -111,6 +117,7 @@ import * as userApi from "../api/userApi";
 import * as analyticsApi from "../api/analyticsApi";
 import http, { dataOf, listOf, errorMessage } from "../api/axiosClient";
 import { CATEGORIES } from "../utils/constants";
+import { buildReportLocation, validateReportLocation } from "../utils/reportLocation";
 import { fmtDate, entityId, imageUrl } from "../utils/formatters";
 import { homePathForUser } from "../utils/roleRouting";
 
@@ -269,6 +276,29 @@ function BrowseSelect({
   );
 }
 
+async function fetchAllPaginatedRows(fetchPage) {
+  const first = await fetchPage(1);
+  const body = first?.data;
+  if (!Array.isArray(body?.data)) {
+    throw new Error("The server returned an unexpected paginated list response.");
+  }
+  const totalPageCount = Number(body.pagination?.totalPages);
+  if (!Number.isInteger(totalPageCount) || totalPageCount < 0) {
+    throw new Error("The server returned invalid pagination metadata.");
+  }
+  const totalPages = Math.max(totalPageCount, 1);
+  const rest = await Promise.all(
+    Array.from({ length: totalPages - 1 }, (_, index) => fetchPage(index + 2)),
+  );
+  const pages = [first, ...rest];
+  return pages.flatMap((response) => {
+    if (!Array.isArray(response?.data?.data)) {
+      throw new Error("The server returned an unexpected paginated list response.");
+    }
+    return response.data.data;
+  });
+}
+
 function useLoad(loader, deps = []) {
   const [state, set] = useState({ loading: true, error: "", data: null });
   const load = useCallback(async () => {
@@ -386,7 +416,9 @@ export function Login({ rectorEntry = false }) {
           error.response?.status === 503 ? "unavailable" : "error",
         );
       });
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [rectorEntry]);
   if (user) return <Navigate to={homePathForUser(user)} replace />;
   async function submit(e) {
@@ -420,7 +452,9 @@ export function Login({ rectorEntry = false }) {
       setCopiedCredential(kind);
       window.setTimeout(() => setCopiedCredential(""), 1600);
     } catch {
-      E("Copying is unavailable in this browser. Select and copy the credential instead.");
+      E(
+        "Copying is unavailable in this browser. Select and copy the credential instead.",
+      );
     }
   }
   return (
@@ -497,10 +531,17 @@ export function Login({ rectorEntry = false }) {
       </form>
       {rectorEntry && (
         <>
-          <div className="rector-demo-divider" aria-hidden="true"><span>or</span></div>
-          <aside className="rector-demo-access" aria-labelledby="rector-demo-title">
+          <div className="rector-demo-divider" aria-hidden="true">
+            <span>or</span>
+          </div>
+          <aside
+            className="rector-demo-access"
+            aria-labelledby="rector-demo-title"
+          >
             <div className="rector-demo-copy">
-              <span className="rector-demo-icon"><Building2 size={23} aria-hidden="true" /></span>
+              <span className="rector-demo-icon">
+                <Building2 size={23} aria-hidden="true" />
+              </span>
               <div>
                 <h2 id="rector-demo-title">Demo Rector Credentials</h2>
                 <p>Use this account to explore the sample Rector portal.</p>
@@ -510,10 +551,16 @@ export function Login({ rectorEntry = false }) {
               <div className="rector-demo-credentials">
                 {[
                   ["Email", "email", PUBLIC_DEMO_RECTOR_CREDENTIALS.email],
-                  ["Password", "password", PUBLIC_DEMO_RECTOR_CREDENTIALS.password],
+                  [
+                    "Password",
+                    "password",
+                    PUBLIC_DEMO_RECTOR_CREDENTIALS.password,
+                  ],
                 ].map(([label, key, value]) => (
                   <div className="rector-demo-credential-row" key={key}>
-                    <span className="rector-demo-credential-label">{label}</span>
+                    <span className="rector-demo-credential-label">
+                      {label}
+                    </span>
                     <code>{value}</code>
                     <button
                       type="button"
@@ -522,24 +569,30 @@ export function Login({ rectorEntry = false }) {
                       title={`Copy demo ${label.toLowerCase()}`}
                       onClick={() => copyDemoCredential(key, value)}
                     >
-                      {copiedCredential === key ? <Check size={16} /> : <Copy size={16} />}
+                      {copiedCredential === key ? (
+                        <Check size={16} />
+                      ) : (
+                        <Copy size={16} />
+                      )}
                     </button>
                   </div>
                 ))}
                 <span className="rector-demo-copy-status" aria-live="polite">
-                  {copiedCredential ? `${copiedCredential === "email" ? "Email" : "Password"} copied` : ""}
+                  {copiedCredential
+                    ? `${copiedCredential === "email" ? "Email" : "Password"} copied`
+                    : ""}
                 </span>
               </div>
               {/* <p className="rector-demo-setup-message" role="status"> */}
-                {/* Use these credentials to explore the Rector portal. */}
-                {/* {demoCredentialsStatus === "ready"
+              {/* Use these credentials to explore the Rector portal. */}
+              {/* {demoCredentialsStatus === "ready"
                   ? " The demo account is verified and ready."
                   : demoCredentialsStatus === "loading"
                     ? " Checking whether the account is provisioned…"
                     : " The demo account is not verified on this server; quick demo access is unavailable."} */}
               {/* </p> */}
             </>
-          {/* <button
+            {/* <button
             type="button"
             className="button secondary rector-demo-button"
             onClick={exploreDemo}
@@ -548,10 +601,13 @@ export function Login({ rectorEntry = false }) {
             {busy ? "Opening demo…" : "Explore Rector Demo"}
             {!busy && <ArrowRight size={16} aria-hidden="true" />}
           </button> */}
-          {/* <small>Demo access · Sample hostel data</small> */}
+            {/* <small>Demo access · Sample hostel data</small> */}
           </aside>
           <p className="auth-foot rector-demo-footer">
-            Not a Rector? <Link to="/login">Student sign in <ArrowRight size={15} aria-hidden="true" /></Link>
+            Not a Rector?{" "}
+            <Link to="/login">
+              Student sign in <ArrowRight size={15} aria-hidden="true" />
+            </Link>
           </p>
         </>
       )}
@@ -1740,21 +1796,7 @@ export function ReportForm({ type = "lost", edit = false }) {
           : "Choose when you found the item.";
     }
     if (stepNumber === 3) {
-      const { area, coordinates, mode, confirmed } = form.location;
-      if (!mode || !area.trim())
-        return "Choose a location method and enter a place or nearby landmark.";
-      if (
-        mode === "map" &&
-        (!confirmed ||
-          !Array.isArray(coordinates) ||
-          coordinates.length !== 2 ||
-          !Number.isFinite(Number(coordinates[0])) ||
-          !Number.isFinite(Number(coordinates[1])) ||
-          Math.abs(Number(coordinates[0])) > 180 ||
-          Math.abs(Number(coordinates[1])) > 90)
-      ) {
-        return "Select a valid point on the map and confirm the location.";
-      }
+      return validateReportLocation(form.location);
     }
     return "";
   }
@@ -1793,24 +1835,6 @@ export function ReportForm({ type = "lost", edit = false }) {
       setStep(3);
       return;
     }
-    const { area, coordinates, mode, confirmed } = form.location;
-    if (!mode || !area.trim()) {
-      E("Choose a location method and enter a place or nearby landmark.");
-      return;
-    }
-    if (
-      mode === "map" &&
-      (!confirmed ||
-        !Array.isArray(coordinates) ||
-        coordinates.length !== 2 ||
-        !Number.isFinite(Number(coordinates[0])) ||
-        !Number.isFinite(Number(coordinates[1])) ||
-        Math.abs(Number(coordinates[0])) > 180 ||
-        Math.abs(Number(coordinates[1])) > 90)
-    ) {
-      E("Select a valid point on the map and confirm the location.");
-      return;
-    }
     B(true);
     E("");
     try {
@@ -1820,15 +1844,7 @@ export function ReportForm({ type = "lost", edit = false }) {
         brand: form.brand,
         color: form.color,
         description: form.description,
-        location: {
-          area: area.trim(),
-          ...(mode === "map"
-            ? {
-                type: "Point",
-                coordinates: [Number(coordinates[0]), Number(coordinates[1])],
-              }
-            : {}),
-        },
+        location: buildReportLocation(form.location),
         [type === "lost" ? "lostAt" : "foundAt"]: form.date,
         images: form.images.map((image) => image.file),
         ...(edit && removedImageIds.length
@@ -1934,7 +1950,7 @@ export function ReportForm({ type = "lost", edit = false }) {
             </div>
           </header>
 
-          {err && step !== 2 && (
+          {err && step !== 2 && step !== 3 && (
             <div className="form-alert report-form-alert" role="alert">
               {err}
             </div>
@@ -2034,9 +2050,13 @@ export function ReportForm({ type = "lost", edit = false }) {
               </label>
               <LocationSelector
                 value={form.location}
-                onChange={(location) =>
-                  F((current) => ({ ...current, location }))
-                }
+                error={err}
+                onChange={(location) => {
+                  F((current) => ({ ...current, location }));
+                  E((currentError) =>
+                    currentError ? validateReportLocation(location) : "",
+                  );
+                }}
               />
             </div>
           )}
@@ -2228,7 +2248,9 @@ export function ItemDetail() {
     [evidence, E] = useState(""),
     [msg, S] = useState(""),
     [deleteBusy, setDeleteBusy] = useState(false),
-    [deleteError, setDeleteError] = useState("");
+    [deleteError, setDeleteError] = useState(""),
+    [receiveBusy, setReceiveBusy] = useState(false),
+    [receiveError, setReceiveError] = useState("");
   useEffect(() => {
     if (!data.data) return;
     (type === "lost"
@@ -2257,6 +2279,22 @@ export function ItemDetail() {
     user?.role === "student" &&
     entityId(item.reportedBy) === user?._id &&
     ["ACTIVE", "MATCH_FOUND"].includes(item.status);
+  const canConfirmFoundReceipt =
+    type === "found" &&
+    user?.role === "rector" &&
+    item.status === "AWAITING_HANDOVER";
+  async function confirmFoundReceipt() {
+    setReceiveBusy(true);
+    setReceiveError("");
+    try {
+      await foundApi.receiveFound(id);
+      setRefresh((current) => current + 1);
+    } catch (error) {
+      setReceiveError(errorMessage(error));
+    } finally {
+      setReceiveBusy(false);
+    }
+  }
   async function deleteLostReport() {
     if (
       !window.confirm(
@@ -2351,6 +2389,19 @@ export function ItemDetail() {
                   )}
                 </div>
               )}
+            {canConfirmFoundReceipt && (
+              <div className="report-owner-actions detail-owner-actions">
+                <button
+                  className="button primary small"
+                  type="button"
+                  disabled={receiveBusy}
+                  onClick={confirmFoundReceipt}
+                >
+                  {receiveBusy ? "Confirming…" : "Confirm receipt"}
+                </button>
+                {receiveError && <p className="form-alert" role="alert">{receiveError}</p>}
+              </div>
+            )}
           </div>
         </article>
         <aside className="detail-side">
@@ -3078,8 +3129,8 @@ export function Claims() {
   )[0];
   const recoveryComplete = Boolean(
     latestClaim?.rectorCompletedAt ||
-      latestClaim?.foundReportId?.status === "RETURNED" ||
-      latestClaim?.lostReportId?.status === "RECOVERED",
+    latestClaim?.foundReportId?.status === "RETURNED" ||
+    latestClaim?.lostReportId?.status === "RECOVERED",
   );
   const currentClaimStep = !latestClaim
     ? -1
@@ -3160,7 +3211,10 @@ export function Claims() {
           ))}
         </div>
       ) : (
-        <section className="claims-empty-card" aria-labelledby="claims-empty-title">
+        <section
+          className="claims-empty-card"
+          aria-labelledby="claims-empty-title"
+        >
           <img
             className="claims-empty-botanical"
             src="/claims-botanical.svg"
@@ -3186,185 +3240,684 @@ export function Claims() {
 }
 
 export function RectorDashboard() {
-  const user = useAuth().user;
-  const found = useLoad(() => foundApi.getFound({ page: 1, limit: 100 }), []),
+  const found = useLoad(() => foundApi.getFound({ page: 1, limit: 3 }), []),
     handover = useLoad(async () => {
       const response = await foundApi.getFound({
         page: 1,
-        limit: 6,
+        limit: 1,
         status: "AWAITING_HANDOVER",
       });
-      return {
-        items: response.data?.data || [],
-        total: response.data?.pagination?.total ?? 0,
-      };
+      return response.data?.pagination?.total ?? 0;
     }, []),
     claims = useLoad(async () => {
-      const [recentResponse, submittedResponse, verifyingResponse] = await Promise.all([
-        claimApi.getRectorClaims({ page: 1, limit: 5 }),
-        claimApi.getRectorClaims({ page: 1, limit: 1, status: "SUBMITTED" }),
-        claimApi.getRectorClaims({ page: 1, limit: 1, status: "UNDER_VERIFICATION" }),
-      ]);
+      const allClaims = await fetchAllPaginatedRows((page) =>
+        claimApi.getRectorClaims({ page, limit: 100 }),
+      );
+      const events = allClaims.flatMap((claim) => {
+        const itemName = claim.foundReportId?.itemName || claim.lostReportId?.itemName || "Claimed item";
+        const eventRows = [{
+          id: `claim-${claim._id}`,
+          title: "Ownership claim submitted",
+          detail: `${itemName} · ${claim.claimantId?.name || "Student"}`,
+          createdAt: claim.createdAt,
+          icon: ClipboardCheck,
+        }];
+        if (claim.status === "APPROVED" && claim.reviewedAt) eventRows.push({ id: `claim-approved-${claim._id}`, title: "Claim approved", detail: itemName, createdAt: claim.reviewedAt, icon: CheckCircle2 });
+        if (claim.rectorCompletedAt) eventRows.push({ id: `claim-handed-over-${claim._id}`, title: "Item handed over to student", detail: `${itemName} · ${claim.claimantId?.name || "Student"}`, createdAt: claim.rectorCompletedAt, icon: PackageCheck });
+        if (claim.status === "REJECTED" && claim.reviewedAt) eventRows.push({ id: `claim-rejected-${claim._id}`, title: "Claim rejected", detail: itemName, createdAt: claim.reviewedAt, icon: ClipboardCheck });
+        return eventRows;
+      }).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 3);
       return {
-        items: recentResponse.data?.data?.claims || [],
-        reviewTotal:
-          (submittedResponse.data?.pagination?.total ?? 0) +
-          (verifyingResponse.data?.pagination?.total ?? 0),
+        items: allClaims.slice(0, 3),
+        events,
+        reviewTotal: allClaims.filter((claim) => ["SUBMITTED", "UNDER_VERIFICATION"].includes(claim.status)).length,
       };
     }, []),
-    users = useLoad(() => userApi.getUsers({ page: 1, limit: 6 }), []),
-    activity = useLoad(() => notifApi.getNotifications({ page: 1, limit: 5 }), []);
-  const rows = found.data?.data?.data || [];
+    studentSummary = useLoad(userApi.getRectorStudentSummary, []);
+  const rows = Array.isArray(found.data?.data?.data) ? found.data.data.data : [];
   const claimRows = Array.isArray(claims.data?.items) ? claims.data.items : [];
-  const hostelName = user?.hostelId?.name || "Your assigned hostel";
-  async function receive(id) {
-    try {
-      await foundApi.receiveFound(id);
-      found.reload();
-      handover.reload();
-    } catch (e) {
-      alert(errorMessage(e));
-    }
-  }
-  async function account(id, active) {
-    try {
-      await userApi.updateUserStatus(id, active);
-      users.reload();
-    } catch (e) {
-      alert(errorMessage(e));
-    }
-  }
+  const dashboardTime = (value) => value
+    ? new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(new Date(value))
+    : "Time unavailable";
+  const activityRows = [
+    ...rows.map((item) => ({
+      id: `report-${item._id}`,
+      title: "New item reported",
+      detail: [item.itemName, item.location?.area].filter(Boolean).join(" · "),
+      createdAt: item.createdAt,
+      icon: FileText,
+    })),
+    ...(claims.data?.events || []),
+  ].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 3);
   return (
     <div className="content rector-dashboard">
       <section className="rector-hero" aria-labelledby="rector-hero-title">
         <div className="rector-hero-copy">
-          <div className="eyebrow">RECTOR WORKSPACE · {hostelName}</div>
+          <div className="eyebrow">RECTOR WORKSPACE · YOUR ASSIGNED HOSTEL</div>
           <h1 id="rector-hero-title">Your hostel, in good hands.</h1>
           <p>Review claims, return found items, and support your students.</p>
-        </div>
-        <div className="rector-hostel-badge">
-          <span className="rector-hostel-icon"><Building2 size={21} aria-hidden="true" /></span>
-          <span><b>{hostelName}</b><small>Your assigned hostel</small></span>
         </div>
       </section>
 
       <section className="rector-priority-grid" aria-label="Priority tasks">
         <article className="rector-priority-card claims-priority">
-          <span className="rector-priority-icon"><ClipboardCheck size={25} aria-hidden="true" /></span>
+          <span className="rector-priority-icon">
+            <ClipboardCheck size={25} aria-hidden="true" />
+          </span>
           <div className="rector-priority-copy">
             <h2>Claims to review</h2>
+            <strong className="rector-priority-count">
+              {claims.loading
+                ? "…"
+                : claims.error
+                  ? "—"
+                  : (claims.data?.reviewTotal ?? 0)}
+            </strong>
             <p>Pending ownership requests from students.</p>
           </div>
-          <strong className="rector-priority-count">
-            {claims.loading ? "…" : claims.error ? "—" : claims.data?.reviewTotal ?? 0}
-          </strong>
-          <Link className="rector-priority-action peach-action" to="/rector-claims">
-            Review claims <ArrowRight size={16} aria-hidden="true" />
-          </Link>
         </article>
         <article className="rector-priority-card handover-priority">
-          <span className="rector-priority-icon"><PackageSearch size={25} aria-hidden="true" /></span>
+          <span className="rector-priority-icon">
+            <PackageSearch size={25} aria-hidden="true" />
+          </span>
           <div className="rector-priority-copy">
             <h2>Found items awaiting handover</h2>
+            <strong className="rector-priority-count">
+              {handover.loading
+                ? "…"
+                : handover.error
+                  ? "—"
+                  : (handover.data ?? 0)}
+            </strong>
             <p>Verified items ready to return to their owners.</p>
           </div>
-          <strong className="rector-priority-count">
-            {handover.loading ? "…" : handover.error ? "—" : handover.data?.total ?? 0}
-          </strong>
-          <Link className="rector-priority-action green-action" to="/browse">
-            View items <ArrowRight size={16} aria-hidden="true" />
-          </Link>
-          {handover.data?.items?.length > 0 && (
-            <div className="rector-handover-preview">
-              {handover.data.items.slice(0, 2).map((item) => (
-                <div className="rector-handover-row" key={item._id}>
-                  <span className="rector-row-main"><b>{item.itemName}</b><small>{item.category} · {fmtDate(item.foundAt)}</small></span>
-                  <button className="rector-student-action" type="button" onClick={() => receive(item._id)}>Confirm receipt</button>
-                </div>
-              ))}
-            </div>
-          )}
         </article>
       </section>
 
       <div className="rector-dashboard-grid">
         <section className="rector-dashboard-card" id="recent-found-reports">
           <div className="rector-card-heading">
-            <div><div className="eyebrow">RECENT FOUND REPORTS</div><h2>Newly reported found items in your hostel.</h2></div>
-            <Link className="rector-view-all" to="/browse">View all <ArrowRight size={14} aria-hidden="true" /></Link>
+            <div>
+              <h2>Recent found reports</h2>
+              <p>Latest items reported in your hostel by students.</p>
+            </div>
           </div>
-          {found.loading ? <Loading /> : found.error ? <ErrorState message={found.error} onRetry={found.reload} /> : rows.length ? (
-            <div className="rector-compact-list">
-              {rows.slice(0, 5).map((item) => {
+          {found.loading ? (
+            <Loading />
+          ) : found.error ? (
+            <ErrorState message={found.error} onRetry={found.reload} />
+          ) : rows.length ? (
+            <div className="rector-compact-list rector-dashboard-reports">
+              {rows.slice(0, 3).map((item) => {
                 const image = imageUrl(item);
                 return (
-                  <Link className="rector-report-row" to={`/items/${item._id}`} key={item._id}>
-                    <span className={`rector-report-thumb ${image ? "has-image" : ""}`}>
-                      {image ? <img src={image} alt="" loading="lazy" /> : <PackageSearch size={19} aria-hidden="true" />}
+                  <div
+                    className="rector-report-row"
+                    key={item._id}
+                  >
+                    <span
+                      className={`rector-report-thumb ${image ? "has-image" : ""}`}
+                    >
+                      {image ? (
+                        <img src={image} alt="" loading="lazy" />
+                      ) : (
+                        <PackageSearch size={19} aria-hidden="true" />
+                      )}
                     </span>
-                    <span className="rector-row-main"><b>{item.itemName}</b><small>{[item.category, item.location?.area, fmtDate(item.foundAt)].filter(Boolean).join(" · ")}</small></span>
-                    <Badge value={item.status} />
-                  </Link>
+                    <span className="rector-row-main">
+                      <Link to={`/items/${item._id}?type=found`}><b>{item.itemName}</b></Link>
+                      <small>
+                        {[item.category, item.location?.area]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </small>
+                    </span>
+                    <time className="rector-dashboard-date" dateTime={item.foundAt || item.createdAt}><span>{fmtDate(item.foundAt || item.createdAt)}</span><small>{dashboardTime(item.foundAt || item.createdAt)}</small></time>
+                  </div>
                 );
               })}
             </div>
-          ) : <div className="rector-empty-state"><span><PackageSearch size={20} /></span><b>No recent found items</b><p>New reports will appear here when students submit them.</p></div>}
-        </section>
-
-        <section className="rector-dashboard-card">
-          <div className="rector-card-heading">
-            <div><div className="eyebrow">RECENT CLAIMS</div><h2>Latest ownership claims from students.</h2></div>
-            <Link className="rector-view-all" to="/rector-claims">View all <ArrowRight size={14} aria-hidden="true" /></Link>
-          </div>
-          {claims.loading ? <Loading /> : claims.error ? <ErrorState message={claims.error} onRetry={claims.reload} /> : claimRows.length ? (
-            <div className="rector-compact-list">
-              {claimRows.slice(0, 5).map((claim) => (
-                <Link className="rector-claim-row" to="/rector-claims" key={claim._id}>
-                  <span className="rector-row-main"><b>{claim.foundReportId?.itemName || claim.lostReportId?.itemName || "Claimed item"}</b><small>{claim.claimantId?.name || "Student"} · {fmtDate(claim.createdAt)}</small></span>
-                  <Badge value={claim.status} />
-                </Link>
-              ))}
+          ) : (
+            <div className="rector-empty-state">
+              <span>
+                <PackageSearch size={20} />
+              </span>
+              <b>No recent found items</b>
+              <p>New reports will appear here when students submit them.</p>
             </div>
-          ) : <div className="rector-empty-state"><span><FileText size={20} /></span><b>No claims to review</b><p>Student claim requests will appear here.</p></div>}
+          )}
         </section>
 
         <section className="rector-dashboard-card">
           <div className="rector-card-heading">
-            <div><div className="eyebrow">STUDENT ACCOUNTS</div><h2>Manage student accounts in your hostel.</h2></div>
-          </div>
-          {users.loading ? <Loading /> : users.error ? <ErrorState message={users.error} onRetry={users.reload} /> : users.data?.length ? (
-            <div className="rector-student-list">
-              {users.data.slice(0, 6).map((student) => (
-                <div className="rector-student-row" key={student._id}>
-                  <span className="rector-student-avatar" aria-hidden="true">{(student.name || "S").slice(0, 1).toUpperCase()}</span>
-                  <span className="rector-row-main"><b>{student.name}</b><small>{student.email}</small></span>
-                  <button className="rector-student-action" type="button" onClick={() => account(student._id, !student.isActive)}>
-                    {student.isActive ? "Deactivate" : "Reactivate"}
-                  </button>
-                </div>
-              ))}
+            <div>
+              <h2>Recent claims</h2>
+              <p>Latest ownership claims from students.</p>
             </div>
-          ) : <div className="rector-empty-state"><span><Users size={20} /></span><b>No students found</b><p>Student accounts for your hostel will appear here.</p></div>}
+          </div>
+          {claims.loading ? (
+            <Loading />
+          ) : claims.error ? (
+            <ErrorState message={claims.error} onRetry={claims.reload} />
+          ) : claimRows.length ? (
+            <div className="rector-compact-list rector-dashboard-claims">
+              {claimRows.slice(0, 3).map((claim) => {
+                const claimant = claim.claimantId || {};
+                const statusLabel = claim.status === "UNDER_VERIFICATION" && claim.infoRequestedReason
+                  ? "Needs information"
+                  : claim.status === "SUBMITTED" || claim.status === "UNDER_VERIFICATION"
+                    ? "Pending review"
+                    : claim.status === "APPROVED" && claim.studentConfirmedAt && !claim.rectorCompletedAt
+                      ? "Awaiting handover"
+                      : claim.status === "APPROVED" ? "Approved" : "Rejected";
+                const statusTone = statusLabel === "Pending review" ? "pending" : statusLabel === "Needs information" ? "information" : statusLabel === "Rejected" ? "rejected" : "approved";
+                return (
+                  <div className="rector-claim-row" key={claim._id}>
+                    <span className="rector-claim-avatar" aria-hidden="true">
+                      {(claimant.name || "S").trim().slice(0, 1).toUpperCase()}
+                    </span>
+                    <span className="rector-row-main">
+                      <b>{claimant.name || "Student"}</b>
+                      <small>{[claimant.course, claimant.year ? `Year ${claimant.year}` : ""].filter(Boolean).join(" · ") || claimant.email || "Student"}</small>
+                    </span>
+                    <span className="rector-claim-item-name">{claim.foundReportId?.itemName || claim.lostReportId?.itemName || "Claimed item"}</span>
+                    <span className={`rector-claim-status ${statusTone}`}><i aria-hidden="true" />{statusLabel}</span>
+                    <time className="rector-dashboard-date" dateTime={claim.createdAt}><span>{fmtDate(claim.createdAt)}</span><small>{dashboardTime(claim.createdAt)}</small></time>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rector-empty-state">
+              <span>
+                <FileText size={20} />
+              </span>
+              <b>No claims to review</b>
+              <p>Student claim requests will appear here.</p>
+            </div>
+          )}
         </section>
 
         <section className="rector-dashboard-card">
           <div className="rector-card-heading">
-            <div><div className="eyebrow">RECENT ACTIVITY</div><h2>Latest updates related to your hostel.</h2></div>
-            <Link className="rector-view-all" to="/notifications">View all <ArrowRight size={14} aria-hidden="true" /></Link>
+            <div>
+              <h2>Student accounts</h2>
+              <p>Total students in your hostel and recent registrations.</p>
+            </div>
           </div>
-          {activity.loading ? <Loading /> : activity.error ? <ErrorState message={activity.error} onRetry={activity.reload} /> : activity.data?.notifications?.length ? (
+          {studentSummary.loading ? (
+            <Loading />
+          ) : studentSummary.error ? (
+            <ErrorState message={studentSummary.error} onRetry={studentSummary.reload} />
+          ) : (
+            <Link className="rector-student-summary" to="/rector-students" aria-label="Open student accounts">
+              <span className="rector-student-summary-icon"><Users size={25} aria-hidden="true" /></span>
+              <span className="rector-student-stat"><b>{studentSummary.data?.total ?? 0}</b><small>Students in your hostel</small></span>
+              <span className="rector-student-divider" aria-hidden="true" />
+              <span className="rector-student-stat"><b>+ {studentSummary.data?.newThisMonth ?? 0}</b><small>New registrations this month</small></span>
+            </Link>
+          )}
+        </section>
+
+        <section className="rector-dashboard-card">
+          <div className="rector-card-heading">
+            <div>
+              <h2>Recent activity</h2>
+              <p>Latest updates related to your hostel.</p>
+            </div>
+          </div>
+          {found.loading || claims.loading ? (
+            <Loading />
+          ) : found.error ? (
+            <ErrorState message={found.error} onRetry={found.reload} />
+          ) : claims.error ? (
+            <ErrorState message={claims.error} onRetry={claims.reload} />
+          ) : activityRows.length ? (
             <div className="rector-activity-list">
-              {activity.data.notifications.slice(0, 5).map((notification) => (
-                <div className="rector-activity-row" key={notification._id}>
-                  <span><Bell size={17} aria-hidden="true" /></span>
-                  <span className="rector-row-main"><b>{notification.title}</b><small>{notification.message}</small></span>
-                  <time dateTime={notification.createdAt}>{fmtDate(notification.createdAt)}</time>
-                </div>
-              ))}
+              {activityRows.map((event) => {
+                const ActivityIcon = event.icon;
+                return <div className="rector-activity-row" key={event.id}>
+                  <span>
+                    <ActivityIcon size={17} aria-hidden="true" />
+                  </span>
+                  <span className="rector-row-main">
+                    <b>{event.title}</b>
+                    <small>{event.detail}</small>
+                  </span>
+                  <time dateTime={event.createdAt}><span>{fmtDate(event.createdAt)}</span><small>{dashboardTime(event.createdAt)}</small></time>
+                </div>;
+              })}
             </div>
-          ) : <div className="rector-empty-state"><span><Bell size={20} /></span><b>No recent activity</b><p>Updates on reports, claims and handovers will appear here.</p></div>}
+          ) : (
+            <div className="rector-empty-state">
+              <span>
+                <Bell size={20} />
+              </span>
+              <b>No recent activity</b>
+              <p>Updates on reports, claims and handovers will appear here.</p>
+            </div>
+          )}
         </section>
       </div>
+    </div>
+  );
+}
+
+export function RectorStudents() {
+  const user = useAuth().user;
+  const pageSize = 5;
+  const [search, setSearch] = useState("");
+  const [course, setCourse] = useState("");
+  const [department, setDepartment] = useState("");
+  const [year, setYear] = useState("");
+  const [active, setActive] = useState("");
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [page, setPage] = useState(1);
+  const [updatingId, setUpdatingId] = useState("");
+  const [openActionId, setOpenActionId] = useState("");
+  const summary = useLoad(userApi.getRectorStudentSummary, []);
+  const students = useLoad(async () => {
+    const response = await userApi.getUsersPage({
+      page,
+      limit: pageSize,
+      search: search.trim() || undefined,
+      course: course || undefined,
+      department: department || undefined,
+      year: year || undefined,
+      isActive: active || undefined,
+      sortBy: "createdAt",
+      sortOrder,
+    });
+    if (!Array.isArray(response?.data?.data) || !response?.data?.pagination) {
+      throw new Error("The server returned an unexpected student list response.");
+    }
+    return { items: response.data.data, pagination: response.data.pagination };
+  }, [page, search, course, department, year, active, sortOrder]);
+
+  async function updateStatus(student) {
+    const nextStatus = !student.isActive;
+    if (!window.confirm(`${nextStatus ? "Reactivate" : "Deactivate"} ${student.name || "this student account"}?`)) return;
+    setOpenActionId("");
+    setUpdatingId(student._id);
+    try {
+      await userApi.updateUserStatus(student._id, nextStatus);
+      await Promise.all([students.reload(), summary.reload()]);
+    } catch (error) {
+      window.alert(errorMessage(error));
+    } finally {
+      setUpdatingId("");
+    }
+  }
+  const resetFilters = () => {
+    setSearch("");
+    setCourse("");
+    setDepartment("");
+    setYear("");
+    setActive("");
+    setPage(1);
+  };
+  const items = Array.isArray(students.data?.items) ? students.data.items : [];
+  const pagination = students.data?.pagination || {};
+  const total = Math.max(0, Number(pagination.total ?? 0) || 0);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const firstVisible = total ? (currentPage - 1) * pageSize + 1 : 0;
+  const lastVisible = Math.min(currentPage * pageSize, total);
+
+  useEffect(() => {
+    if (!students.loading && !students.error && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, students.loading, students.error, totalPages]);
+
+  return (
+    <div className="content rector-students-page">
+      <header className="rector-students-hero">
+        {/* <Link className="rector-management-back" to="/rector-dashboard"><ArrowLeft size={16} aria-hidden="true" />Back to dashboard</Link> */}
+        <div className="rector-management-heading">
+          {/* <div className="eyebrow">RECTOR WORKSPACE · STUDENT MANAGEMENT</div> */}
+          <h1>Student accounts</h1>
+          <p>View and manage student accounts in your assigned hostel.</p>
+        </div>
+      </header>
+      <section className="rector-student-metrics" aria-label="Student account summary">
+        {summary.loading ? <div className="rector-student-metric-card"><Loading label="Loading student totals…" /></div> : summary.error ? <div className="rector-student-metric-card"><ErrorState message={summary.error} onRetry={summary.reload} /></div> : (
+          <>
+            <article className="rector-student-metric-card"><span className="rector-student-metric-icon"><Users size={30} aria-hidden="true" /></span><span><b>{summary.data?.total ?? 0}</b><small>Students in your hostel</small></span></article>
+            <article className="rector-student-metric-card"><span className="rector-student-metric-icon"><Activity size={30} aria-hidden="true" /></span><span><b>+ {summary.data?.newThisMonth ?? 0}</b><small>New registrations this month</small></span><Info className="rector-student-metric-info" size={19} aria-label="Registrations since the start of this month" /></article>
+          </>
+        )}
+      </section>
+      <section className="rector-management-panel">
+        <div className="rector-management-toolbar">
+          <label className="rector-student-search"><Search size={19} aria-hidden="true" /><input aria-label="Search students by name, student ID or email" placeholder="Search by name, student ID or email…" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} /></label>
+          <BrowseSelect
+            className="rector-student-filter"
+            label="Filter by course"
+            icon={BookOpen}
+            value={course}
+            options={[
+              { value: "", label: "All courses" },
+              ...(summary.data?.courses || []).map((item) => ({ value: item, label: item })),
+            ]}
+            onChange={(value) => { setCourse(value); setPage(1); }}
+          />
+          <BrowseSelect
+            className="rector-student-filter"
+            label="Filter by department"
+            icon={Building2}
+            value={department}
+            options={[
+              { value: "", label: "All departments" },
+              ...(summary.data?.departments || []).map((item) => ({ value: item, label: item })),
+            ]}
+            onChange={(value) => { setDepartment(value); setPage(1); }}
+          />
+          <BrowseSelect
+            className="rector-student-filter"
+            label="Filter by year"
+            icon={GraduationCap}
+            value={year}
+            options={[
+              { value: "", label: "All years" },
+              ...(summary.data?.years || []).map((item) => ({ value: item, label: `Year ${item}` })),
+            ]}
+            onChange={(value) => { setYear(value); setPage(1); }}
+          />
+          <BrowseSelect
+            className="rector-student-filter"
+            label="Filter by account status"
+            icon={Compass}
+            value={active}
+            options={[
+              { value: "", label: "All statuses" },
+              { value: "true", label: "Active" },
+              { value: "false", label: "Inactive" },
+            ]}
+            onChange={(value) => { setActive(value); setPage(1); }}
+          />
+          <button className="rector-student-clear" type="button" onClick={resetFilters}><SlidersHorizontal size={17} aria-hidden="true" />Clear filters</button>
+        </div>
+        {students.error ? <ErrorState message={students.error} onRetry={students.reload} /> : students.loading || page > totalPages ? <Loading label="Loading student accounts…" /> : (
+          <>
+            {items.length ? <div className="rector-student-table-wrap"><table className="rector-student-table"><colgroup><col className="student-col-name" /><col className="student-col-id" /><col className="student-col-email" /><col className="student-col-course" /><col className="student-col-registered" /><col className="student-col-status" /><col className="student-col-actions" /><col className="student-col-menu" /></colgroup><thead><tr><th>Student</th><th>Student ID</th><th>Email</th><th>Course / Year</th><th aria-sort={sortOrder === "desc" ? "descending" : "ascending"}><button className="rector-student-sort" type="button" onClick={() => { setSortOrder((order) => order === "desc" ? "asc" : "desc"); setPage(1); }}>Registered <ArrowDown className={sortOrder === "asc" ? "ascending" : ""} size={14} aria-hidden="true" /></button></th><th>Status</th><th>Actions</th><th aria-label="More actions" /></tr></thead><tbody>{items.map((student) => <tr key={student._id}><td><Link className="rector-student-name" to={`/rector-students/${student._id}`}><span className="rector-student-avatar">{student.profileImage && <img src={student.profileImage} alt="" onError={(event) => { event.currentTarget.hidden = true; }} />}{(student.name || "S").trim().slice(0, 1).toUpperCase()}</span><span className="rector-student-name-text">{student.name || "Student"}</span></Link></td><td>{student.studentId || "—"}</td><td>{student.email || "—"}</td><td>{[student.course, student.year ? `Year ${student.year}` : ""].filter(Boolean).join(" · ") || student.department || "—"}</td><td>{fmtDate(student.createdAt)}</td><td><span className={`rector-account-status ${student.isActive ? "active" : "inactive"}`}><i aria-hidden="true" />{student.isActive ? "Active" : "Inactive"}</span></td><td><Link className="rector-student-profile-button" to={`/rector-students/${student._id}`}>View profile <ArrowRight size={16} aria-hidden="true" /></Link></td><td><div className="rector-student-row-menu"><button className="rector-student-menu-trigger" type="button" aria-label={`Actions for ${student.name || "student"}`} aria-expanded={openActionId === student._id} onClick={() => setOpenActionId((current) => current === student._id ? "" : student._id)}><MoreVertical size={19} aria-hidden="true" /></button>{openActionId === student._id && <div className="rector-student-menu" role="menu"><Link role="menuitem" to={`/rector-students/${student._id}`} onClick={() => setOpenActionId("")}>View profile</Link><button role="menuitem" type="button" disabled={updatingId === student._id} onClick={() => updateStatus(student)}>{updatingId === student._id ? "Saving…" : student.isActive ? "Deactivate account" : "Reactivate account"}</button></div>}</div></td></tr>)}</tbody></table></div> : <div className="rector-management-empty"><Users size={22} aria-hidden="true" /><b>No students match these filters</b><p>Try adjusting your search or filters.</p></div>}
+            <nav className="rector-student-pagination" aria-label="Student account pages">
+              <span>Showing {firstVisible}–{lastVisible} of {total} students</span>
+              <div className="rector-student-page-buttons">
+                <button type="button" aria-label="Previous page" disabled={currentPage <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
+                  <ChevronLeft size={16} aria-hidden="true" />Previous
+                </button>
+                <span className="rector-student-page-indicator" aria-live="polite">Page {currentPage} of {totalPages}</span>
+                <button type="button" aria-label="Next page" disabled={currentPage >= totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>
+                  Next<ChevronRight size={16} aria-hidden="true" />
+                </button>
+              </div>
+            </nav>
+          </>
+        )}
+      </section>
+    </div>
+  );
+}
+
+const rectorProfileTabs = [
+  { id: "personal", label: "Personal details", icon: UserRound },
+  { id: "academic", label: "Academic details", icon: GraduationCap },
+  { id: "hostel", label: "Hostel details", icon: Building2 },
+  { id: "reports", label: "Reports submitted", icon: FileText },
+  { id: "claims", label: "Ownership claims", icon: Tag },
+  { id: "activity", label: "Activity", icon: Clock3 },
+];
+
+function RectorProfileInfoCard({ title, icon: Icon, fields }) {
+  return (
+    <section className="rector-profile-info-card">
+      <header className="rector-profile-card-heading">
+        <span className="rector-profile-section-icon"><Icon size={19} aria-hidden="true" /></span>
+        <h2>{title}</h2>
+      </header>
+      <dl className="rector-profile-fields">
+        {fields.map(([label, value, FieldIcon = Icon]) => (
+          <div className="rector-profile-field" key={label}>
+            <span className="rector-profile-field-icon"><FieldIcon size={19} aria-hidden="true" /></span>
+            <dt>{label}</dt>
+            <dd>{value || "Not provided"}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+function RectorProfileCollectionCard({ title, icon: Icon, count, children, emptyTitle, emptyDescription }) {
+  return (
+    <section className="rector-profile-collection-card">
+      <header className="rector-profile-card-heading">
+        <span className="rector-profile-section-icon"><Icon size={19} aria-hidden="true" /></span>
+        <h2>{title}</h2>
+        <span className="rector-profile-count">{count}</span>
+      </header>
+      {count ? <div className="rector-profile-collection-list">{children}</div> : (
+        <div className="rector-profile-empty">
+          <span className="rector-profile-empty-icon"><Icon size={28} aria-hidden="true" /></span>
+          <b>{emptyTitle}</b>
+          <p>{emptyDescription}</p>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function rectorActivityDate(value) {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return "Date unavailable";
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+export function RectorStudentDetail() {
+  const { id } = useParams();
+  const tabPrefix = useId();
+  const tabRefs = useRef([]);
+  const [activeTab, setActiveTab] = useState("personal");
+  const [updating, setUpdating] = useState(false);
+  const student = useLoad(async () => {
+    const result = await userApi.getUser(id);
+    return result?.user || result;
+  }, [id]);
+  const related = useLoad(async () => {
+    const [lost, found, claims] = await Promise.all([
+      fetchAllPaginatedRows((page) => lostApi.getLost({ page, limit: 100, reportedBy: id })),
+      fetchAllPaginatedRows((page) => foundApi.getFound({ page, limit: 100, reportedBy: id })),
+      fetchAllPaginatedRows((page) => claimApi.getRectorClaims({ page, limit: 100, claimantId: id })),
+    ]);
+    return {
+      reports: [
+        ...lost.map((report) => ({ ...report, reportType: "lost" })),
+        ...found.map((report) => ({ ...report, reportType: "found" })),
+      ].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)),
+      claims,
+    };
+  }, [id]);
+  const record = student.data || {};
+  const reports = related.data?.reports || [];
+  const claims = related.data?.claims || [];
+
+  async function updateStatus() {
+    const nextStatus = !record.isActive;
+    if (!window.confirm(`${nextStatus ? "Reactivate" : "Deactivate"} ${record.name || "this student account"}?`)) return;
+    setUpdating(true);
+    try {
+      await userApi.updateUserStatus(id, nextStatus);
+      await student.reload();
+    } catch (error) {
+      window.alert(errorMessage(error));
+    } finally {
+      setUpdating(false);
+    }
+  }
+
+  function handleTabKeyDown(event, index) {
+    let nextIndex = index;
+    if (event.key === "ArrowRight") nextIndex = (index + 1) % rectorProfileTabs.length;
+    else if (event.key === "ArrowLeft") nextIndex = (index - 1 + rectorProfileTabs.length) % rectorProfileTabs.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = rectorProfileTabs.length - 1;
+    else return;
+    event.preventDefault();
+    const nextTab = rectorProfileTabs[nextIndex];
+    setActiveTab(nextTab.id);
+    tabRefs.current[nextIndex]?.focus();
+  }
+
+  const personalFields = [
+    ["Full name", record.name, UserRound],
+    ["Email address", record.email, Mail],
+    ["Phone number", record.phone, Phone],
+    ["Date of birth", record.dateOfBirth, CalendarDays],
+    ["Gender", record.gender, UserRound],
+  ];
+  const academicFields = [
+    ["Student ID", record.studentId, CreditCard],
+    ["Course", record.course, GraduationCap],
+    ["Department", record.department, Building2],
+    ["Academic year", record.year ? `Year ${record.year}` : "", CalendarDays],
+    ["Semester", record.semester, BookOpen],
+  ];
+  const hostel = record.hostelId && typeof record.hostelId === "object" ? record.hostelId : {};
+  const hostelFields = [
+    ["Hostel name", hostel.name, Building2],
+    ["Room number", record.roomNumber, DoorOpen],
+    ["Hostel location", hostel.location?.area, MapPin],
+  ];
+  const activity = [
+    ...(record.createdAt ? [{ id: "account-created", title: "Account created", at: record.createdAt, detail: "Student account was created." }] : []),
+    ...reports.map((report) => ({
+      id: `report-${report.reportType}-${report._id}`,
+      title: `${report.reportType === "lost" ? "Lost" : "Found"} report submitted`,
+      at: report.createdAt,
+      detail: report.itemName || "Report",
+    })),
+    ...claims.map((claim) => ({
+      id: `claim-${claim._id}`,
+      title: "Ownership claim submitted",
+      at: claim.createdAt,
+      detail: claim.foundReportId?.itemName || claim.lostReportId?.itemName || "Claim",
+    })),
+  ].filter((event) => event.at).sort((a, b) => new Date(b.at) - new Date(a.at));
+
+  const renderPersonal = () => <RectorProfileInfoCard title="Personal information" icon={UserRound} fields={personalFields} />;
+  const renderAcademic = () => <RectorProfileInfoCard title="Academic information" icon={GraduationCap} fields={academicFields} />;
+  const renderHostel = () => <RectorProfileInfoCard title="Hostel information" icon={Building2} fields={hostelFields} />;
+  const renderReports = () => (
+    <RectorProfileCollectionCard
+      title="Reports submitted"
+      icon={FileText}
+      count={reports.length}
+      emptyTitle="No reports submitted by this student."
+      emptyDescription="Reports submitted by this student will appear here."
+    >
+      {reports.map((report) => (
+        <Link className="rector-student-related-row" to={`/items/${report._id}?type=${report.reportType}`} key={`${report.reportType}-${report._id}`}>
+          <span><b>{report.itemName || "Report"}</b><small>{report.reportType === "lost" ? "Lost report" : "Found report"} · {report.status || report.category || "Status unavailable"}</small></span>
+          <time>{fmtDate(report.createdAt)}</time>
+        </Link>
+      ))}
+    </RectorProfileCollectionCard>
+  );
+  const renderClaims = () => (
+    <RectorProfileCollectionCard
+      title="Ownership claims"
+      icon={Tag}
+      count={claims.length}
+      emptyTitle="No ownership claims submitted by this student."
+      emptyDescription="Claims submitted by this student will appear here."
+    >
+      {claims.map((claim) => (
+        <div className="rector-student-related-row" key={claim._id}>
+          <span><b>{claim.foundReportId?.itemName || claim.lostReportId?.itemName || "Claimed item"}</b><small>{claim.status?.replaceAll("_", " ") || "Status unavailable"}</small></span>
+          <time>{fmtDate(claim.createdAt)}</time>
+        </div>
+      ))}
+    </RectorProfileCollectionCard>
+  );
+  const renderActivity = () => (
+    <section className="rector-profile-activity-card">
+      <header className="rector-profile-card-heading"><span className="rector-profile-section-icon"><Clock3 size={19} aria-hidden="true" /></span><h2>Recent activity</h2></header>
+      {activity.length ? (
+        <ol className="rector-profile-activity-list">
+          {activity.map((event) => (
+            <li key={event.id}>
+              <span className="rector-profile-activity-dot" />
+              <div><b>{event.title}</b><time>{rectorActivityDate(event.at)}</time><p>{event.detail}</p></div>
+            </li>
+          ))}
+        </ol>
+      ) : <div className="rector-profile-empty"><p>No activity is available for this student.</p></div>}
+    </section>
+  );
+
+  let panelContent;
+  if (activeTab === "personal") panelContent = renderPersonal();
+  else if (activeTab === "academic") panelContent = renderAcademic();
+  else if (activeTab === "hostel") panelContent = renderHostel();
+  else if (activeTab === "reports") panelContent = renderReports();
+  else if (activeTab === "claims") panelContent = renderClaims();
+  else panelContent = renderActivity();
+
+  return (
+    <div className="content rector-students-page rector-student-detail-page">
+      {/* <Link className="rector-management-back" to="/rector-students"><ArrowLeft size={16} aria-hidden="true" />Back to student accounts</Link> */}
+      {student.loading ? <Loading label="Loading student profile…" /> : student.error ? <ErrorState message={student.error} onRetry={student.reload} /> : (
+        <>
+          <section className="rector-student-profile-card">
+            <span className="rector-student-profile-avatar">
+              {record.profileImage && <img src={record.profileImage} alt="" onError={(event) => { event.currentTarget.hidden = true; }} />}
+              {!record.profileImage && (record.name || "S").trim().slice(0, 1).toUpperCase()}
+            </span>
+            <div className="rector-student-profile-identity">
+              <div className="rector-student-profile-name"><h1>{record.name || "Student"}</h1><span className={`rector-profile-status ${record.isActive ? "active" : "inactive"}`}><i aria-hidden="true" />{record.isActive ? "Active" : "Inactive"}</span></div>
+              <div className="rector-student-profile-contact"><span><Mail size={17} aria-hidden="true" />{record.email || "Email unavailable"}</span><span><CreditCard size={17} aria-hidden="true" />Student ID: {record.studentId || "Not provided"}</span></div>
+            </div>
+            <button type="button" className="rector-student-action" disabled={updating} onClick={updateStatus}>{updating ? "Saving…" : record.isActive ? "Deactivate account" : "Reactivate account"}</button>
+            <div className="rector-student-summary-row">
+              {[
+                [GraduationCap, "Course", record.course],
+                [Building2, "Department", record.department],
+                [CalendarDays, "Academic year", record.year ? `Year ${record.year}` : ""],
+                [BookOpen, "Semester", record.semester],
+                [CalendarDays, "Registered", record.createdAt ? fmtDate(record.createdAt) : ""],
+              ].map(([Icon, label, value]) => <div className="rector-student-summary-item" key={label}><Icon size={19} aria-hidden="true" /><span><small>{label}</small><b>{value || "Not provided"}</b></span></div>)}
+            </div>
+          </section>
+          <div className="rector-profile-tab-scroll">
+            <div className="rector-profile-tabs" role="tablist" aria-label="Student profile sections">
+              {rectorProfileTabs.map(({ id: tab, label, icon: Icon }, index) => (
+                <button
+                  ref={(node) => { tabRefs.current[index] = node; }}
+                  id={`${tabPrefix}-tab-${tab}`}
+                  key={tab}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === tab}
+                  aria-controls={`${tabPrefix}-panel`}
+                  tabIndex={activeTab === tab ? 0 : -1}
+                  className={activeTab === tab ? "active" : ""}
+                  onClick={() => setActiveTab(tab)}
+                  onKeyDown={(event) => handleTabKeyDown(event, index)}
+                >
+                  <Icon size={19} aria-hidden="true" />{label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <section className="rector-profile-tab-panel rector-profile-tab-panel-detail" id={`${tabPrefix}-panel`} role="tabpanel" aria-labelledby={`${tabPrefix}-tab-${activeTab}`}>
+            {related.loading ? <Loading label="Loading student reports and claims…" /> : related.error ? <ErrorState message={related.error} onRetry={related.reload} /> : panelContent}
+          </section>
+        </>
+      )}
     </div>
   );
 }
@@ -4219,15 +4772,16 @@ export function Profile() {
   const studentShift = u.shift || "";
   const stats = activity.data?.summary || activity.data?.data?.summary || {};
   const beginEdit = () => {
+    if (!isStudent) return;
     M("");
     setEditing(true);
   };
-  const editButton = (label = "Edit") => (
+  const editButton = (label = "Edit") => isStudent ? (
     <button type="button" className="profile-edit-button" onClick={beginEdit}>
       <Pencil size={15} aria-hidden="true" />
       {label}
     </button>
-  );
+  ) : null;
   const field = (label, name, value, options = {}) =>
     options.select ? (
       <div
@@ -4614,18 +5168,49 @@ export function Profile() {
 }
 
 export function RectorClaims() {
-  const claims = useLoad(() => claimApi.getRectorClaims({ page: 1, limit: 100 }), []);
-  const rows = claims.data?.data?.data || [];
+  const user = useAuth().user;
+  const claims = useLoad(async () => {
+    const firstPage = await claimApi.getRectorClaims({ page: 1, limit: 100 });
+    const normalizedFirstPage = claimApi.normalizeRectorClaimsPage(firstPage);
+    const pagination = normalizedFirstPage.pagination;
+    const remainingPages = await Promise.all(
+      Array.from(
+        { length: Math.max((pagination.totalPages || 1) - 1, 0) },
+        (_, index) => claimApi.getRectorClaims({ page: index + 2, limit: 100 }),
+      ),
+    );
+    const normalizedRemainingPages = remainingPages.map(
+      claimApi.normalizeRectorClaimsPage,
+    );
+    return {
+      claims: [
+        normalizedFirstPage.claims,
+        ...normalizedRemainingPages.map((page) => page.claims),
+      ].flat(),
+      pagination,
+    };
+  }, []);
+  const rows = Array.isArray(claims.data?.claims) ? claims.data.claims : [];
+  const [activeTab, setActiveTab] = useState("all");
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState("latest");
   async function updateClaim(id, status, rejectionReason) {
     try {
-      await claimApi.reviewClaim(id, { status, ...(rejectionReason ? { rejectionReason } : {}) });
+      await claimApi.reviewClaim(id, {
+        status,
+        ...(rejectionReason ? { rejectionReason } : {}),
+      });
       claims.reload();
     } catch (error) {
       alert(errorMessage(error));
     }
   }
   async function requestInformation(id) {
-    const infoRequestedReason = window.prompt("What additional ownership evidence should the student provide?");
+    const infoRequestedReason = window.prompt(
+      "What additional ownership evidence should the student provide?",
+    );
     if (!infoRequestedReason?.trim()) return;
     try {
       await claimApi.requestInformation(id, infoRequestedReason.trim());
@@ -4640,57 +5225,404 @@ export function RectorClaims() {
     updateClaim(id, "REJECTED", reason.trim());
   }
 
+  async function completeHandover(id) {
+    try {
+      await recApi.completeRecovery(id);
+      claims.reload();
+    } catch (error) {
+      alert(errorMessage(error));
+    }
+  }
+
+  const categories = [
+    ...new Set(
+      rows.map((claim) => claim.foundReportId?.category).filter(Boolean),
+    ),
+  ].sort();
+  const isNeedsInfo = (claim) =>
+    claim.status === "UNDER_VERIFICATION" && Boolean(claim.infoRequestedReason);
+  const isPendingReview = (claim) =>
+    ["SUBMITTED", "UNDER_VERIFICATION"].includes(claim.status) &&
+    !isNeedsInfo(claim);
+  const isAwaitingHandover = (claim) =>
+    claim.status === "APPROVED" &&
+    Boolean(claim.studentConfirmedAt) &&
+    !claim.rectorCompletedAt;
+  const tabCounts = {
+    all: rows.length,
+    pending: rows.filter(isPendingReview).length,
+    information: rows.filter(isNeedsInfo).length,
+    approved: rows.filter((claim) => claim.status === "APPROVED").length,
+    handover: rows.filter(isAwaitingHandover).length,
+    rejected: rows.filter((claim) => claim.status === "REJECTED").length,
+  };
+  const visibleRows = [...rows]
+    .filter((claim) => {
+      const itemName = claim.foundReportId?.itemName || "";
+      const claimantName = claim.claimantId?.name || "";
+      const matchesSearch = `${itemName} ${claimantName}`
+        .toLowerCase()
+        .includes(search.trim().toLowerCase());
+      const matchesCategory =
+        category === "all" || claim.foundReportId?.category === category;
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "AWAITING_HANDOVER"
+          ? isAwaitingHandover(claim)
+          : claim.status === statusFilter);
+      const matchesTab =
+        activeTab === "all" ||
+        (activeTab === "pending" && isPendingReview(claim)) ||
+        (activeTab === "information" && isNeedsInfo(claim)) ||
+        (activeTab === "approved" && claim.status === "APPROVED") ||
+        (activeTab === "handover" && isAwaitingHandover(claim)) ||
+        (activeTab === "rejected" && claim.status === "REJECTED");
+      return matchesSearch && matchesCategory && matchesStatus && matchesTab;
+    })
+    .sort((a, b) => {
+      const delta = new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+      return sortOrder === "latest" ? delta : -delta;
+    });
+
+  const formatTime = (value) =>
+    value
+      ? new Intl.DateTimeFormat(undefined, {
+          hour: "numeric",
+          minute: "2-digit",
+        }).format(new Date(value))
+      : "Time unavailable";
+  const statusLabel = (claim) => {
+    if (isNeedsInfo(claim)) return "Needs information";
+    if (isPendingReview(claim)) return "Pending review";
+    if (isAwaitingHandover(claim)) return "Awaiting handover";
+    if (claim.status === "APPROVED" && claim.rectorCompletedAt)
+      return "Returned";
+    return claim.status === "APPROVED" ? "Approved" : "Rejected";
+  };
+
   return (
-    <div className="content">
-      <PageHead
-        eyebrow="CLAIM REVIEW"
-        title="Claim Verification Center"
-        description="Review ownership requests and verify evidence for items in your assigned hostel."
-      />
-      <section className="panel rector-panel">
-        <div className="section-title">
-          <div>
-            <div className="eyebrow">ASSIGNED HOSTEL</div>
-            <h2>Ownership claims</h2>
+    <div className="content rector-claims-page">
+      <section className="rector-claims-hero">
+        <div className="rector-claims-hero-copy">
+          <div className="eyebrow">
+            CLAIM REVIEW · RECTOR WORKSPACE
+            {user?.hostelId?.name ? ` · ${user.hostelId.name}` : ""}
           </div>
-          <span className="counter-pill">{rows.length} claims</span>
+          <h1>Claim Verification Center</h1>
+          <p>
+            Review ownership requests and verify evidence for items in your
+            assigned hostel.
+          </p>
         </div>
-        {claims.loading ? <Loading label="Loading hostel claims…" /> : claims.error ? (
+      </section>
+
+      <section className="claim-summary-grid" aria-label="Claim status summary">
+        {[
+          {
+            id: "pending",
+            title: "Pending review",
+            detail: "Awaiting your decision",
+            count: tabCounts.pending,
+            icon: FileText,
+            tone: "orange",
+          },
+          {
+            id: "information",
+            title: "Needs information",
+            detail: "Student response pending",
+            count: tabCounts.information,
+            icon: Hourglass,
+            tone: "amber",
+          },
+          {
+            id: "approved",
+            title: "Approved",
+            detail: "Ready for handover",
+            count: tabCounts.approved,
+            icon: CheckCircle2,
+            tone: "green",
+          },
+          {
+            id: "handover",
+            title: "Awaiting handover",
+            detail: "Confirmed returns to complete",
+            count: tabCounts.handover,
+            icon: PackageCheck,
+            tone: "sage",
+          },
+        ].map(({ id, title, detail, count, icon: Icon, tone }) => (
+          <button
+            className={`claim-summary-card ${tone}`}
+            type="button"
+            key={id}
+            onClick={() => setActiveTab(id)}
+          >
+            <span className="claim-summary-icon">
+              <Icon size={23} aria-hidden="true" />
+            </span>
+            <span className="claim-summary-copy">
+              <b>{title}</b>
+              <strong>{claims.loading ? "…" : count}</strong>
+              <small>{detail}</small>
+            </span>
+            {/* <span className="claim-summary-arrow"><ArrowRight size={17} aria-hidden="true" /></span> */}
+          </button>
+        ))}
+      </section>
+
+      <section className="ownership-claims-panel">
+        <header className="ownership-claims-header">
+          <h2>Ownership claims</h2>
+          <div className="claim-controls">
+            <label className="claim-search">
+              <Search size={16} aria-hidden="true" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search by item name or student name..."
+                aria-label="Search claims"
+              />
+            </label>
+            <BrowseSelect
+              label="Filter by category"
+              value={category}
+              options={[
+                { value: "all", label: "All categories" },
+                ...categories.map((item) => ({ value: item, label: item })),
+              ]}
+              onChange={setCategory}
+              className="claim-select-label claim-category-select"
+            />
+            <BrowseSelect
+              label="Filter by status"
+              value={statusFilter}
+              options={[
+                { value: "all", label: "All statuses" },
+                { value: "SUBMITTED", label: "Pending review" },
+                { value: "UNDER_VERIFICATION", label: "Under verification" },
+                { value: "APPROVED", label: "Approved" },
+                { value: "AWAITING_HANDOVER", label: "Awaiting handover" },
+                { value: "REJECTED", label: "Rejected" },
+              ]}
+              onChange={setStatusFilter}
+              className="claim-select-label claim-status-select"
+            />
+            <BrowseSelect
+              label="Sort claims"
+              value={sortOrder}
+              options={[
+                { value: "latest", label: "Latest first" },
+                { value: "oldest", label: "Oldest first" },
+              ]}
+              onChange={setSortOrder}
+              icon={ArrowDownAZ}
+              className="claim-select-label claim-sort-select"
+            />
+          </div>
+        </header>
+
+        <div
+          className="claim-status-tabs"
+          role="tablist"
+          aria-label="Filter claims by status"
+        >
+          {[
+            ["all", "All claims"],
+            ["pending", "Pending"],
+            ["information", "Needs info"],
+            ["approved", "Approved"],
+            ["handover", "Awaiting handover"],
+            ["rejected", "Rejected"],
+          ].map(([id, label]) => (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === id}
+              className={activeTab === id ? "active" : ""}
+              key={id}
+              onClick={() => setActiveTab(id)}
+            >
+              {label} <span>({tabCounts[id]})</span>
+            </button>
+          ))}
+        </div>
+
+        {claims.loading ? (
+          <Loading label="Loading hostel claims…" />
+        ) : claims.error ? (
           <ErrorState message={claims.error} onRetry={claims.reload} />
-        ) : rows.length ? (
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>Item</th><th>Claimant</th><th>Evidence</th><th>Status</th><th>Review</th></tr></thead>
+        ) : visibleRows.length ? (
+          <div className="claim-table-wrap">
+            <table className="rector-claim-table">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Claimant</th>
+                  <th>Submitted on</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
               <tbody>
-                {rows.map((claim) => (
-                  <tr key={claim._id}>
-                    <td>
-                      <b>{claim.foundReportId?.itemName || "Found item"}</b>
-                      <small>{claim.foundReportId?.category || ""} · {fmtDate(claim.createdAt)}</small>
-                    </td>
-                    <td>
-                      <b>{claim.claimantId?.name || "Student"}</b>
-                      <small>{claim.claimantId?.studentId || claim.claimantId?.email || ""}</small>
-                    </td>
-                    <td>{claim.evidence || "—"}</td>
-                    <td><Badge value={claim.status} /></td>
-                    <td>
-                      {claim.status === "SUBMITTED" ? (
-                        <button className="button outline small" onClick={() => updateClaim(claim._id, "UNDER_VERIFICATION")}>Begin verification</button>
-                      ) : claim.status === "UNDER_VERIFICATION" ? (
-                        <div className="claim-review-actions">
-                          <button className="text-button" onClick={() => requestInformation(claim._id)}>Request info</button>
-                          <button className="button outline small" onClick={() => updateClaim(claim._id, "APPROVED")}>Approve</button>
-                          <button className="text-button" onClick={() => rejectClaim(claim._id)}>Reject</button>
+                {visibleRows.map((claim) => {
+                  const item = claim.foundReportId || {};
+                  const claimant = claim.claimantId || {};
+                  const displayStatus = statusLabel(claim);
+                  const statusTone =
+                    displayStatus === "Pending review"
+                      ? "pending"
+                      : displayStatus === "Needs information"
+                        ? "information"
+                        : displayStatus === "Rejected"
+                          ? "rejected"
+                          : "approved";
+                  return (
+                    <tr key={claim._id}>
+                      <td>
+                        <div className="claim-item-cell">
+                          <span className="claim-item-thumb">
+                            <PackageSearch size={22} aria-hidden="true" />
+                          </span>
+                          <span className="claim-cell-copy">
+                            <b>{item.itemName || "Found item"}</b>
+                            <small>
+                              {item.category || "Category unavailable"}
+                            </small>
+                            <small className="claim-location">
+                              <MapPin size={12} aria-hidden="true" />
+                              {item.location?.area || "Location unavailable"}
+                            </small>
+                            <details className="claim-evidence">
+                              <summary>View evidence</summary>
+                              <p>
+                                {claim.evidence ||
+                                  "No evidence details were provided."}
+                              </p>
+                            </details>
+                          </span>
                         </div>
-                      ) : "—"}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td>
+                        <div className="claimant-cell">
+                          <span className="claimant-avatar" aria-hidden="true">
+                            {(claimant.name || "S").slice(0, 1).toUpperCase()}
+                          </span>
+                          <span className="claim-cell-copy">
+                            <b>{claimant.name || "Student"}</b>
+                            <small>
+                              {[
+                                claimant.course,
+                                claimant.year ? `Year ${claimant.year}` : "",
+                              ]
+                                .filter(Boolean)
+                                .join(" · ") ||
+                                claimant.email ||
+                                "Student details unavailable"}
+                            </small>
+                            {claimant.studentId && (
+                              <small>ID: {claimant.studentId}</small>
+                            )}
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="claim-date">
+                          {fmtDate(claim.createdAt)}
+                        </span>
+                        <small className="claim-time">
+                          {formatTime(claim.createdAt)}
+                        </small>
+                      </td>
+                      <td>
+                        <span className={`claim-status-text ${statusTone}`}>
+                          <i aria-hidden="true" />
+                          {displayStatus}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="claim-row-actions">
+                          {claim.status === "SUBMITTED" && (
+                            <button
+                              className="claim-action primary"
+                              type="button"
+                              onClick={() =>
+                                updateClaim(claim._id, "UNDER_VERIFICATION")
+                              }
+                            >
+                              Review <ArrowRight size={15} aria-hidden="true" />
+                            </button>
+                          )}
+                          {claim.status === "UNDER_VERIFICATION" && (
+                            <>
+                              <button
+                                className="claim-action subtle"
+                                type="button"
+                                onClick={() => requestInformation(claim._id)}
+                              >
+                                Request info
+                              </button>
+                              <button
+                                className="claim-action primary"
+                                type="button"
+                                onClick={() =>
+                                  updateClaim(claim._id, "APPROVED")
+                                }
+                              >
+                                Approve
+                              </button>
+                              <button
+                                className="claim-action quiet"
+                                type="button"
+                                onClick={() => rejectClaim(claim._id)}
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
+                          {claim.status === "APPROVED" &&
+                            claim.studentConfirmedAt &&
+                            !claim.rectorCompletedAt && (
+                              <button
+                                className="claim-action primary"
+                                type="button"
+                                onClick={() => completeHandover(claim._id)}
+                              >
+                                Mark handover{" "}
+                                <ArrowRight size={15} aria-hidden="true" />
+                              </button>
+                            )}
+                          {claim.status === "APPROVED" &&
+                            !claim.studentConfirmedAt && (
+                              <span className="claim-waiting-label">
+                                Awaiting student
+                              </span>
+                            )}
+                          {claim.status === "APPROVED" &&
+                            claim.rectorCompletedAt && (
+                              <span className="claim-waiting-label">
+                                Completed
+                              </span>
+                            )}
+                          {claim.status === "REJECTED" && (
+                            <span className="claim-waiting-label">Closed</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-        ) : <EmptyState title="No claims to review" />}
+        ) : (
+          <div className="claim-empty-state">
+            <img src="/claims-rabbit-reference.png" alt="" />
+            <div>
+              <b>No claims to review</b>
+              <p>Student ownership requests will appear here.</p>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

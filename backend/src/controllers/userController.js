@@ -1,5 +1,5 @@
 const asyncWrapper = require('../utils/asyncWrapper');
-const { successResponse, paginatedResponse } = require('../utils/apiResponse');
+const { successResponse, paginatedResponse, errorResponse } = require('../utils/apiResponse');
 const User = require('../models/User');
 const LostReport = require('../models/LostReport');
 const FoundReport = require('../models/FoundReport');
@@ -16,6 +16,10 @@ const getMyProfile = asyncWrapper(async (req, res) => {
 });
 
 const updateMyProfile = asyncWrapper(async (req, res) => {
+  if (req.user.role !== ROLES.STUDENT) {
+    return errorResponse(res, 403, 'Only students can update their own profile details.');
+  }
+
   const allowedFields = [
     'name',
     'phone',
@@ -96,8 +100,11 @@ const getMyActivitySummary = asyncWrapper(async (req, res) => {
 });
 
 const getUsers = asyncWrapper(async (req, res) => {
-  const page = parseInt(req.query.page, 10) || 1;
-  const limit = parseInt(req.query.limit, 10) || 10;
+  if (!req.user.hostelId) {
+    return errorResponse(res, 403, 'Rector must have an assigned hostel to view students.');
+  }
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 10, 1), 100);
   const skip = (page - 1) * limit;
 
   // Rector can view only students belonging to the assigned hostel.
@@ -113,14 +120,27 @@ const getUsers = asyncWrapper(async (req, res) => {
       { email: { $regex: req.query.search, $options: 'i' } }
     ];
   }
+  if (req.query.course) filter.course = req.query.course;
+  if (req.query.department) filter.department = req.query.department;
+  if (req.query.year && Number.isFinite(Number(req.query.year))) {
+    filter.year = Number(req.query.year);
+  }
+  if (req.query.isActive === 'true' || req.query.isActive === 'false') {
+    filter.isActive = req.query.isActive === 'true';
+  }
 
   const total = await User.countDocuments(filter);
+  const sortBy = req.query.sortBy === 'createdAt' ? 'createdAt' : 'name';
+  const sortDirection = req.query.sortOrder === 'asc' ? 1 : -1;
+  const sort = sortBy === 'name'
+    ? { name: 1 }
+    : { createdAt: sortDirection, _id: sortDirection };
 
   const users = await User.find(filter)
     .select(
       'name email phone studentId course department year semester hostelId roomNumber isActive profileImage createdAt updatedAt'
     )
-    .sort({ name: 1 })
+    .sort(sort)
     .skip(skip)
     .limit(limit);
 
@@ -129,6 +149,30 @@ const getUsers = asyncWrapper(async (req, res) => {
     limit,
     total,
     totalPages: Math.ceil(total / limit) || 1
+  });
+});
+
+const getRectorStudentSummary = asyncWrapper(async (req, res) => {
+  if (!req.user.hostelId) {
+    return errorResponse(res, 403, 'Rector must have an assigned hostel to view student totals.');
+  }
+  const filter = { hostelId: req.user.hostelId, role: ROLES.STUDENT };
+  const now = new Date();
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const nextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  const [total, newThisMonth, courses, departments, years] = await Promise.all([
+    User.countDocuments(filter),
+    User.countDocuments({ ...filter, createdAt: { $gte: monthStart, $lt: nextMonth } }),
+    User.distinct('course', filter),
+    User.distinct('department', filter),
+    User.distinct('year', filter)
+  ]);
+  return successResponse(res, 200, 'Hostel student summary retrieved', {
+    total,
+    newThisMonth,
+    courses: courses.filter(Boolean).sort(),
+    departments: departments.filter(Boolean).sort(),
+    years: years.filter((year) => Number.isFinite(Number(year))).sort((a, b) => Number(a) - Number(b))
   });
 });
 
@@ -147,7 +191,8 @@ const getUserById = asyncWrapper(async (req, res) => {
   // Rector can view only users from the assigned hostel.
   if (
     req.user.role === ROLES.RECTOR &&
-    req.user.hostelId?.toString() !== targetUser.hostelId?.toString()
+    (!req.user.hostelId || targetUser.role !== ROLES.STUDENT ||
+      req.user.hostelId?.toString() !== targetUser.hostelId?.toString())
   ) {
     return res.status(403).json({
       success: false,
@@ -158,10 +203,13 @@ const getUserById = asyncWrapper(async (req, res) => {
   let query = User.findById(req.params.id).select('-password');
 
   if (!isSelf) {
-    // Another user's private information must not be exposed.
-    query = query.select(
-      '-parentGuardian -emergencyContact -address -roomNumber -phone'
-    );
+    // Rectors need contact and room details for students in their assigned
+    // hostel; guardian, emergency-contact, and address details remain private.
+    // Other cross-user profile reads continue to omit those fields as well.
+    const privateFields = req.user.role === ROLES.RECTOR
+      ? '-parentGuardian -emergencyContact -address'
+      : '-parentGuardian -emergencyContact -address -roomNumber -phone';
+    query = query.select(privateFields);
   }
 
   const user = await query.populate('hostelId', 'name location');
@@ -191,6 +239,7 @@ module.exports = {
   getMyActivitySummary,
   updateMyProfile,
   getUsers,
+  getRectorStudentSummary,
   getUserById,
   updateUserStatus
 };
