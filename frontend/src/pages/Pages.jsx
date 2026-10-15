@@ -3188,17 +3188,40 @@ export function Claims() {
 export function RectorDashboard() {
   const user = useAuth().user;
   const found = useLoad(() => foundApi.getFound({ page: 1, limit: 100 }), []),
-    analytic = useLoad(analyticsApi.getRectorAnalytics, []),
-    users = useLoad(userApi.getUsers, []),
+    handover = useLoad(async () => {
+      const response = await foundApi.getFound({
+        page: 1,
+        limit: 6,
+        status: "AWAITING_HANDOVER",
+      });
+      return {
+        items: response.data?.data || [],
+        total: response.data?.pagination?.total ?? 0,
+      };
+    }, []),
+    claims = useLoad(async () => {
+      const [recentResponse, submittedResponse, verifyingResponse] = await Promise.all([
+        claimApi.getRectorClaims({ page: 1, limit: 5 }),
+        claimApi.getRectorClaims({ page: 1, limit: 1, status: "SUBMITTED" }),
+        claimApi.getRectorClaims({ page: 1, limit: 1, status: "UNDER_VERIFICATION" }),
+      ]);
+      return {
+        items: recentResponse.data?.data?.claims || [],
+        reviewTotal:
+          (submittedResponse.data?.pagination?.total ?? 0) +
+          (verifyingResponse.data?.pagination?.total ?? 0),
+      };
+    }, []),
+    users = useLoad(() => userApi.getUsers({ page: 1, limit: 6 }), []),
     activity = useLoad(() => notifApi.getNotifications({ page: 1, limit: 5 }), []);
   const rows = found.data?.data?.data || [];
-  const pending = rows.filter((i) =>
-    ["REPORTED", "AWAITING_HANDOVER"].includes(i.status),
-  );
+  const claimRows = Array.isArray(claims.data?.items) ? claims.data.items : [];
+  const hostelName = user?.hostelId?.name || "Your assigned hostel";
   async function receive(id) {
     try {
       await foundApi.receiveFound(id);
       found.reload();
+      handover.reload();
     } catch (e) {
       alert(errorMessage(e));
     }
@@ -3212,196 +3235,136 @@ export function RectorDashboard() {
     }
   }
   return (
-    <div className="content">
-      <PageHead
-        eyebrow="RECTOR WORKSPACE"
-        title="What needs your attention?"
-        description={`Your assigned hostel${user?.hostelId?.name ? `: ${user.hostelId.name}` : ""}. Review found items, oversee recovery and support students.`}
-      >
-        <Link className="button outline" to="/analytics">
-          <TrendingUp size={17} />
-          Hostel analytics
-        </Link>
-      </PageHead>
-      <div className="summary-grid">
-        <Stat
-          icon={ClipboardCheck}
-          label="Claims awaiting review"
-          value={analytic.data?.summary?.pendingClaims ?? "—"}
-        />
-        <Stat
-          icon={PackageSearch}
-          label="Found items awaiting custody"
-          value={pending.length}
-        />
-        <Stat
-          icon={Building2}
-          label="Items with Rector"
-          value={rows.filter((i) => i.status === "WITH_RECTOR").length}
-        />
-        <Stat
-          icon={TrendingUp}
-          label="Recovery rate"
-          value={
-            analytic.data?.summary?.recoveryRate != null
-              ? `${analytic.data.summary.recoveryRate}%`
-              : "—"
-          }
-        />
-      </div>
-      <div className="notice-banner">
-        <ClipboardCheck size={19} />
-        <p>
-          <b>Claim verification</b> Review ownership requests for your assigned hostel.
-          <Link to="/rector-claims">Open Claim Verification Center <ArrowRight size={15} /></Link>
-        </p>
-      </div>
-      <section className="panel rector-panel">
-        <div className="section-title">
-          <div>
-            <div className="eyebrow">CUSTODY QUEUE</div>
-            <h2>Found items awaiting handover</h2>
-          </div>
-          <span className="counter-pill">{pending.length} items</span>
+    <div className="content rector-dashboard">
+      <section className="rector-hero" aria-labelledby="rector-hero-title">
+        <div className="rector-hero-copy">
+          <div className="eyebrow">RECTOR WORKSPACE · {hostelName}</div>
+          <h1 id="rector-hero-title">Your hostel, in good hands.</h1>
+          <p>Review claims, return found items, and support your students.</p>
         </div>
-        {found.loading ? (
-          <Loading />
-        ) : found.error ? (
-          <ErrorState message={found.error} onRetry={found.reload} />
-        ) : pending.length ? (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th>Location</th>
-                  <th>Reported</th>
-                  <th>Status</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pending.map((i) => (
-                  <tr key={i._id}>
-                    <td>
-                      <b>{i.itemName}</b>
-                      <small>{i.category}</small>
-                    </td>
-                    <td>{i.location?.area || "—"}</td>
-                    <td>{fmtDate(i.foundAt)}</td>
-                    <td>
-                      <Badge value={i.status} />
-                    </td>
-                    <td>
-                      <button
-                        className="button outline small"
-                        onClick={() => receive(i._id)}
-                      >
-                        Confirm receipt
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <EmptyState title="No items awaiting handover" />
-        )}
+        <div className="rector-hostel-badge">
+          <span className="rector-hostel-icon"><Building2 size={21} aria-hidden="true" /></span>
+          <span><b>{hostelName}</b><small>Your assigned hostel</small></span>
+        </div>
       </section>
-      <div className="dashboard-columns rector-columns">
-        <section className="panel rector-panel">
-          <div className="eyebrow">ASSIGNED HOSTEL</div>
-          <h2>Recent found reports</h2>
-          {found.loading ? (
-            <Loading />
-          ) : (
-            <div className="mini-list">
-              {rows.slice(0, 6).map((i) => (
-                <MiniItem key={i._id} item={i} type="found" />
+
+      <section className="rector-priority-grid" aria-label="Priority tasks">
+        <article className="rector-priority-card claims-priority">
+          <span className="rector-priority-icon"><ClipboardCheck size={25} aria-hidden="true" /></span>
+          <div className="rector-priority-copy">
+            <h2>Claims to review</h2>
+            <p>Pending ownership requests from students.</p>
+          </div>
+          <strong className="rector-priority-count">
+            {claims.loading ? "…" : claims.error ? "—" : claims.data?.reviewTotal ?? 0}
+          </strong>
+          <Link className="rector-priority-action peach-action" to="/rector-claims">
+            Review claims <ArrowRight size={16} aria-hidden="true" />
+          </Link>
+        </article>
+        <article className="rector-priority-card handover-priority">
+          <span className="rector-priority-icon"><PackageSearch size={25} aria-hidden="true" /></span>
+          <div className="rector-priority-copy">
+            <h2>Found items awaiting handover</h2>
+            <p>Verified items ready to return to their owners.</p>
+          </div>
+          <strong className="rector-priority-count">
+            {handover.loading ? "…" : handover.error ? "—" : handover.data?.total ?? 0}
+          </strong>
+          <Link className="rector-priority-action green-action" to="/browse">
+            View items <ArrowRight size={16} aria-hidden="true" />
+          </Link>
+          {handover.data?.items?.length > 0 && (
+            <div className="rector-handover-preview">
+              {handover.data.items.slice(0, 2).map((item) => (
+                <div className="rector-handover-row" key={item._id}>
+                  <span className="rector-row-main"><b>{item.itemName}</b><small>{item.category} · {fmtDate(item.foundAt)}</small></span>
+                  <button className="rector-student-action" type="button" onClick={() => receive(item._id)}>Confirm receipt</button>
+                </div>
               ))}
             </div>
           )}
-        </section>
-        <section className="panel rector-panel">
-          <div className="section-title">
-            <div>
-              <div className="eyebrow">STUDENT SUPPORT</div>
-              <h2>Student accounts</h2>
-            </div>
+        </article>
+      </section>
+
+      <div className="rector-dashboard-grid">
+        <section className="rector-dashboard-card" id="recent-found-reports">
+          <div className="rector-card-heading">
+            <div><div className="eyebrow">RECENT FOUND REPORTS</div><h2>Newly reported found items in your hostel.</h2></div>
+            <Link className="rector-view-all" to="/browse">View all <ArrowRight size={14} aria-hidden="true" /></Link>
           </div>
-          {users.loading ? (
-            <Loading />
-          ) : users.error ? (
-            <ErrorState message={users.error} onRetry={users.reload} />
-          ) : users.data?.length ? (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Student</th>
-                    <th>Hostel</th>
-                    <th>Account</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.data.slice(0, 8).map((u) => (
-                    <tr key={u._id}>
-                      <td>
-                        <b>{u.name}</b>
-                        <small>{u.studentId}</small>
-                      </td>
-                      <td>{u.hostelId?.name || "—"}</td>
-                      <td>
-                        <span
-                          className={u.isActive ? "account-on" : "account-off"}
-                        >
-                          {u.isActive ? "Active" : "Inactive"}
-                        </span>
-                      </td>
-                      <td>
-                        <button
-                          className="text-button"
-                          onClick={() => account(u._id, !u.isActive)}
-                        >
-                          {u.isActive ? "Deactivate" : "Reactivate"}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {found.loading ? <Loading /> : found.error ? <ErrorState message={found.error} onRetry={found.reload} /> : rows.length ? (
+            <div className="rector-compact-list">
+              {rows.slice(0, 5).map((item) => {
+                const image = imageUrl(item);
+                return (
+                  <Link className="rector-report-row" to={`/items/${item._id}`} key={item._id}>
+                    <span className={`rector-report-thumb ${image ? "has-image" : ""}`}>
+                      {image ? <img src={image} alt="" loading="lazy" /> : <PackageSearch size={19} aria-hidden="true" />}
+                    </span>
+                    <span className="rector-row-main"><b>{item.itemName}</b><small>{[item.category, item.location?.area, fmtDate(item.foundAt)].filter(Boolean).join(" · ")}</small></span>
+                    <Badge value={item.status} />
+                  </Link>
+                );
+              })}
             </div>
-          ) : (
-            <EmptyState title="No students found" />
-          )}
+          ) : <div className="rector-empty-state"><span><PackageSearch size={20} /></span><b>No recent found items</b><p>New reports will appear here when students submit them.</p></div>}
+        </section>
+
+        <section className="rector-dashboard-card">
+          <div className="rector-card-heading">
+            <div><div className="eyebrow">RECENT CLAIMS</div><h2>Latest ownership claims from students.</h2></div>
+            <Link className="rector-view-all" to="/rector-claims">View all <ArrowRight size={14} aria-hidden="true" /></Link>
+          </div>
+          {claims.loading ? <Loading /> : claims.error ? <ErrorState message={claims.error} onRetry={claims.reload} /> : claimRows.length ? (
+            <div className="rector-compact-list">
+              {claimRows.slice(0, 5).map((claim) => (
+                <Link className="rector-claim-row" to="/rector-claims" key={claim._id}>
+                  <span className="rector-row-main"><b>{claim.foundReportId?.itemName || claim.lostReportId?.itemName || "Claimed item"}</b><small>{claim.claimantId?.name || "Student"} · {fmtDate(claim.createdAt)}</small></span>
+                  <Badge value={claim.status} />
+                </Link>
+              ))}
+            </div>
+          ) : <div className="rector-empty-state"><span><FileText size={20} /></span><b>No claims to review</b><p>Student claim requests will appear here.</p></div>}
+        </section>
+
+        <section className="rector-dashboard-card">
+          <div className="rector-card-heading">
+            <div><div className="eyebrow">STUDENT ACCOUNTS</div><h2>Manage student accounts in your hostel.</h2></div>
+          </div>
+          {users.loading ? <Loading /> : users.error ? <ErrorState message={users.error} onRetry={users.reload} /> : users.data?.length ? (
+            <div className="rector-student-list">
+              {users.data.slice(0, 6).map((student) => (
+                <div className="rector-student-row" key={student._id}>
+                  <span className="rector-student-avatar" aria-hidden="true">{(student.name || "S").slice(0, 1).toUpperCase()}</span>
+                  <span className="rector-row-main"><b>{student.name}</b><small>{student.email}</small></span>
+                  <button className="rector-student-action" type="button" onClick={() => account(student._id, !student.isActive)}>
+                    {student.isActive ? "Deactivate" : "Reactivate"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : <div className="rector-empty-state"><span><Users size={20} /></span><b>No students found</b><p>Student accounts for your hostel will appear here.</p></div>}
+        </section>
+
+        <section className="rector-dashboard-card">
+          <div className="rector-card-heading">
+            <div><div className="eyebrow">RECENT ACTIVITY</div><h2>Latest updates related to your hostel.</h2></div>
+            <Link className="rector-view-all" to="/notifications">View all <ArrowRight size={14} aria-hidden="true" /></Link>
+          </div>
+          {activity.loading ? <Loading /> : activity.error ? <ErrorState message={activity.error} onRetry={activity.reload} /> : activity.data?.notifications?.length ? (
+            <div className="rector-activity-list">
+              {activity.data.notifications.slice(0, 5).map((notification) => (
+                <div className="rector-activity-row" key={notification._id}>
+                  <span><Bell size={17} aria-hidden="true" /></span>
+                  <span className="rector-row-main"><b>{notification.title}</b><small>{notification.message}</small></span>
+                  <time dateTime={notification.createdAt}>{fmtDate(notification.createdAt)}</time>
+                </div>
+              ))}
+            </div>
+          ) : <div className="rector-empty-state"><span><Bell size={20} /></span><b>No recent activity</b><p>Updates on reports, claims and handovers will appear here.</p></div>}
         </section>
       </div>
-      <section className="panel rector-panel rector-activity-panel">
-        <div className="section-title">
-          <div>
-            <div className="eyebrow">RECENT ACTIVITY</div>
-            <h2>Latest updates</h2>
-          </div>
-          <Link className="text-button" to="/notifications">All notifications <ArrowRight size={15} /></Link>
-        </div>
-        {activity.loading ? <Loading /> : activity.error ? (
-          <ErrorState message={activity.error} onRetry={activity.reload} />
-        ) : activity.data?.notifications?.length ? (
-          <div className="mini-list">
-            {activity.data.notifications.map((notification) => (
-              <div className="mini-item" key={notification._id}>
-                <div>
-                  <b>{notification.title}</b>
-                  <small>{notification.message}</small>
-                </div>
-                <time dateTime={notification.createdAt}>{fmtDate(notification.createdAt)}</time>
-              </div>
-            ))}
-          </div>
-        ) : <EmptyState title="No recent updates" />}
-      </section>
     </div>
   );
 }
